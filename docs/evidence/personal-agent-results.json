@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-11-06T15:29:57+0800",
+  "checks": [
+    "upload and GET only save/query; no job, Agent Run, model call or eager parse",
+    "first explicit preview parses once; repeat is an unchanged scoped cache hit without LLM",
+    "legacy DOC, native WPS and PPT are explicitly rejected; supported formats stay bounded",
+    "document skill is summary-only in the prompt, frozen per Run, loaded on demand and read-only",
+    "no parser child remains and default deployment has no document-worker"
+  ],
+  "real_file_parses": 1,
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

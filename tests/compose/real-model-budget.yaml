@@ -1,0 +1,14 @@
+# Optional real acceptance guard. Credentials are injected by the launching
+# process and are never stored in this file.
+services:
+  backend:
+    environment:
+      MODEL_MODE: real
+  runtime:
+    environment:
+      MODEL_MODE: real
+      ALLOW_MOCK: "false"
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?Inject the authorized DeepSeek credential}
+      REAL_CALL_BUDGET: ${REAL_CALL_BUDGET:?Set authorized request count}
+      REAL_CALL_BUDGET_SINCE: ${REAL_CALL_BUDGET_SINCE:?Set UTC start time}
+      REAL_MAX_OUTPUT_TOKENS: ${REAL_MAX_OUTPUT_TOKENS:-512}

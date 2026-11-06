@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "cutover_at": "2026-11-06T18:35:18+08:00",
+  "daily_url": "http://localhost:5173",
+  "logical_counts_before_and_after": "6 files | 13 runs | 6 threads",
+  "checks": [
+    "latest Backend, Runtime, Web and demo-mcp images built",
+    "Backend and Runtime migrations completed",
+    "seed completed without replacing existing accounts",
+    "all five daily containers became healthy",
+    "administrator login and thread listing succeeded",
+    "DeepSeek credential and Tavily search readiness are enabled"
+  ],
+  "configuration": {
+    "model_mode": "real",
+    "model_call_budget": 12,
+    "max_output_tokens": 4096,
+    "search_call_budget": 3,
+    "provider_credentials_in_container_only": true
+  },
+  "real_model_calls": 0,
+  "real_search_calls": 0,
+  "note": "The user withdrew backup and rollback artifacts; they are not retained as release deliverables."
+}

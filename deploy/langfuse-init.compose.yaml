@@ -1,0 +1,8 @@
+services:
+  langfuse-web:
+    environment:
+      LANGFUSE_INIT_ORG_ID: ${PERSONAL_LANGFUSE_ORG_ID:?Set organization id}
+      LANGFUSE_INIT_PROJECT_ID: ${PERSONAL_LANGFUSE_PROJECT_ID:?Set project id}
+      LANGFUSE_INIT_PROJECT_NAME: ${PERSONAL_LANGFUSE_PROJECT_NAME:-Personal Agent Demo}
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${PERSONAL_LANGFUSE_PUBLIC_KEY:?Set generated public key}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${PERSONAL_LANGFUSE_SECRET_KEY:?Set generated secret key}

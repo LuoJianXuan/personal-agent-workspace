@@ -1,0 +1,8 @@
+{
+  "name": "分析助手",
+  "description": "检查输入数据",
+  "category": "分析",
+  "content": "先核对数据来源，再给出结论。",
+  "enabled": true,
+  "revision": 0
+}

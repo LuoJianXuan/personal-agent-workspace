@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "subscribers": 32,
+  "rejected_subscriber": 33,
+  "http_status": 429,
+  "retry_after": 3,
+  "management_latency_seconds": 0.051,
+  "checks": [
+    "Per-process 32 cap across 8 owners; 33rd from ninth owner rejected",
+    "Heartbeat observed on real waiting SSE; 31 non-reading clients did not block ordinary execution or management API"
+  ],
+  "real_model_calls": 0,
+  "limits": "No OS socket saturation or production throughput claim",
+  "timestamp": "2026-11-04T11:39:42+0800"
+}

@@ -1,0 +1,3512 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agent Workspace V2",
+    "version": "0.3.0",
+    "description": "Phase 1: framework-first Runtime, governed research, parsed documents, scoped work files, report revisions and optional isolated compute. Verification is recorded separately."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "UserBearer": []
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login",
+        "operationId": "post__api_auth_login",
+        "x-implementation": "S01",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Current enabled identity",
+        "operationId": "get__api_auth_me",
+        "x-implementation": "S01",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "/api/admin/users",
+        "operationId": "get__api_admin_users",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      }
+    },
+    "/api/files/{id}/extract": {
+      "post": {
+        "summary": "/api/admin/users",
+        "operationId": "post__api_admin_users",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Process health",
+        "operationId": "get__health",
+        "x-implementation": "S01",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Dependency and migration readiness",
+        "operationId": "get__ready",
+        "x-implementation": "S01",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/internal/health": {
+      "get": {
+        "summary": "Process health",
+        "operationId": "get__internal_health",
+        "x-implementation": "S01",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/ready": {
+      "get": {
+        "summary": "Dependency and migration readiness",
+        "operationId": "get__internal_ready",
+        "x-implementation": "S01",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/api/catalog/models": {
+      "get": {
+        "summary": "/api/catalog/models",
+        "operationId": "get__api_catalog_models",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelCatalogList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/skills": {
+      "get": {
+        "summary": "/api/catalog/skills",
+        "operationId": "get__api_catalog_skills",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillConfigList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/models": {
+      "get": {
+        "summary": "/api/admin/models",
+        "operationId": "get__api_admin_models",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelConfigList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      },
+      "post": {
+        "summary": "/api/admin/models",
+        "operationId": "post__api_admin_models",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelWrite"
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/skills": {
+      "get": {
+        "summary": "/api/admin/skills",
+        "operationId": "get__api_admin_skills",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillConfigList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      },
+      "post": {
+        "summary": "/api/admin/skills",
+        "operationId": "post__api_admin_skills",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillWrite"
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/mcp-connections": {
+      "get": {
+        "summary": "/api/admin/mcp-connections",
+        "operationId": "get__api_admin_mcp-connections",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpConfigList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      },
+      "post": {
+        "summary": "/api/admin/mcp-connections",
+        "operationId": "post__api_admin_mcp-connections",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpWrite"
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/mcp-connections/{id}/tools": {
+      "get": {
+        "summary": "/api/admin/mcp-connections/{id}/tools",
+        "operationId": "get__api_admin_mcp-connections_id_tools",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpToolConfigList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/models/{id}": {
+      "patch": {
+        "summary": "/api/admin/models/{id}",
+        "operationId": "patch__api_admin_models_id",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelWrite"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/skills/{id}": {
+      "patch": {
+        "summary": "/api/admin/skills/{id}",
+        "operationId": "patch__api_admin_skills_id",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillWrite"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/mcp-connections/{id}": {
+      "patch": {
+        "summary": "/api/admin/mcp-connections/{id}",
+        "operationId": "patch__api_admin_mcp-connections_id",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpWrite"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/users/{id}": {
+      "patch": {
+        "summary": "/api/admin/users/{id}",
+        "operationId": "patch__api_admin_users_id",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnablementWrite"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/mcp-connections/{id}/tools/{tool_id}": {
+      "patch": {
+        "summary": "/api/admin/mcp-connections/{id}/tools/{tool_id}",
+        "operationId": "patch__api_admin_mcp-connections_id_tools_tool_id",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpToolConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnablementWrite"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tool_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/models/{id}/validate": {
+      "post": {
+        "summary": "/api/admin/models/{id}/validate",
+        "operationId": "post__api_admin_models_id_validate",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/admin/mcp-connections/{id}/discover": {
+      "post": {
+        "summary": "/api/admin/mcp-connections/{id}/discover",
+        "operationId": "post__api_admin_mcp-connections_id_discover",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionWrite"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-role": "admin"
+      }
+    },
+    "/api/me/skills/{id}/enablement": {
+      "put": {
+        "summary": "/api/me/skills/{id}/enablement",
+        "operationId": "put__api_me_skills_id_enablement",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceWrite"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/threads": {
+      "post": {
+        "summary": "S03 post /api/threads",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          },
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Thread"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./jsonschema/contracts.json#/$defs/ThreadWrite"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "S03 get /api/threads",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadList"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        }
+      }
+    },
+    "/api/threads/{id}": {
+      "patch": {
+        "summary": "S03 patch /api/threads/{id}",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./jsonschema/contracts.json#/$defs/ThreadWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/threads/{id}/messages": {
+      "get": {
+        "summary": "S03 get /api/threads/{id}/messages",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageList"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/runs/{id}": {
+      "get": {
+        "summary": "S03 get /api/runs/{id}",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Submission"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/runs/{id}/stream": {
+      "get": {
+        "summary": "S03 get /api/runs/{id}/stream",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical SSE; id=seq; Authorization header required",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/admin/runs": {
+      "get": {
+        "summary": "S03 get /api/admin/runs",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        }
+      }
+    },
+    "/api/admin/audits": {
+      "get": {
+        "summary": "/api/admin/audits",
+        "operationId": "get__api_admin_audits",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      }
+    },
+    "/api/threads/{id}/runs": {
+      "post": {
+        "summary": "S03 post /api/threads/{id}/runs",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Submission"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Model/capability unavailable, thread busy, or conflicting idempotent request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Resource exhausted"
+          },
+          "400": {
+            "description": "Invalid submission or more than three default skills; explicit selection is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Selected resource is missing or not visible to this user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./jsonschema/contracts.json#/$defs/Submit"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{id}/events": {
+      "get": {
+        "summary": "S03 get /api/runs/{id}/events",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/internal/runs": {
+      "post": {
+        "summary": "Idempotent start",
+        "operationId": "post__internal_runs",
+        "x-implementation": "S03",
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Start"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/runs/{id}": {
+      "get": {
+        "summary": "Scoped internal operation",
+        "operationId": "get__internal_runs_id",
+        "x-implementation": "S02-S05",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Submission"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/runs/{id}/events": {
+      "get": {
+        "summary": "Scoped internal operation",
+        "operationId": "get__internal_runs_id_events",
+        "x-implementation": "S02-S05",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after_seq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/runs/{id}/stream": {
+      "get": {
+        "summary": "Scoped internal operation",
+        "operationId": "get__internal_runs_id_stream",
+        "x-implementation": "S02-S05",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "id=seq, data=Event JSON; persisted replay; heartbeat comment every 15s"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after_seq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/runs/{id}/approvals": {
+      "get": {
+        "summary": "GET /internal/runs/{id}/approvals",
+        "operationId": "get__internal_runs_id_approvals",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/runs/{id}/resume": {
+      "post": {
+        "summary": "POST /internal/runs/{id}/resume",
+        "operationId": "post__internal_runs_id_resume",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Resume"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/runs/{id}/cancel": {
+      "post": {
+        "summary": "POST /internal/runs/{id}/cancel",
+        "operationId": "post__internal_runs_id_cancel",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Cancel"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/runs/{id}/artifacts": {
+      "post": {
+        "summary": "POST /internal/runs/{id}/artifacts",
+        "operationId": "post__internal_runs_id_artifacts",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://runtime:8000"
+          }
+        ]
+      }
+    },
+    "/internal/mcp/discover": {
+      "post": {
+        "summary": "/internal/mcp/discover",
+        "operationId": "post__internal_mcp_discover",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoverRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ]
+      }
+    },
+    "/internal/capabilities/validate": {
+      "post": {
+        "summary": "/internal/capabilities/validate",
+        "operationId": "post__internal_capabilities_validate",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityDecision"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapabilityValidation"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ]
+      }
+    },
+    "/internal/submissions/{run_id}": {
+      "get": {
+        "summary": "Scoped internal operation",
+        "operationId": "get__internal_submissions_run_id",
+        "x-implementation": "S02-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://backend:8080"
+          }
+        ]
+      }
+    },
+    "/internal/approval-decisions/{decision_id}": {
+      "get": {
+        "summary": "Scoped internal operation",
+        "operationId": "get__internal_approval-decisions_decision_id",
+        "x-implementation": "S02-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://backend:8080"
+          }
+        ]
+      }
+    },
+    "/internal/demo-tickets": {
+      "post": {
+        "summary": "POST /internal/demo-tickets",
+        "operationId": "post__internal_demo-tickets",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://backend:8080"
+          }
+        ]
+      }
+    },
+    "/internal/demo-tickets/by-execution/{execution_id}": {
+      "get": {
+        "summary": "Scoped internal operation",
+        "operationId": "get__internal_demo-tickets_by-execution_execution_id",
+        "x-implementation": "S02-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://backend:8080"
+          }
+        ]
+      }
+    },
+    "/internal/files/{id}/content": {
+      "get": {
+        "summary": "GET /internal/files/{id}/content",
+        "operationId": "get__internal_files_id_content",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://backend:8080"
+          }
+        ]
+      }
+    },
+    "/internal/artifacts": {
+      "post": {
+        "summary": "POST /internal/artifacts",
+        "operationId": "post__internal_artifacts",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "http://backend:8080"
+          }
+        ]
+      }
+    },
+    "/api/runs/{id}/cancel": {
+      "post": {
+        "summary": "POST /api/runs/{id}/cancel",
+        "operationId": "post__api_runs_id_cancel",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/runs/{id}/approvals": {
+      "get": {
+        "summary": "GET /api/runs/{id}/approvals",
+        "operationId": "get__api_runs_id_approvals",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/approvals/{id}/decision": {
+      "post": {
+        "summary": "POST /api/approvals/{id}/decision",
+        "operationId": "post__api_approvals_id_decision",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/runs/{id}/resume": {
+      "post": {
+        "summary": "POST /api/runs/{id}/resume",
+        "operationId": "post__api_runs_id_resume",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/files": {
+      "post": {
+        "summary": "POST /api/files",
+        "operationId": "post__api_files",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "GET /api/files",
+        "operationId": "get__api_files",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/files/{id}": {
+      "get": {
+        "summary": "GET /api/files/{id}",
+        "operationId": "get__api_files_id",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/files/{id}/content": {
+      "get": {
+        "summary": "GET /api/files/{id}/content",
+        "operationId": "get__api_files_id_content",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "columns_only",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "Return header columns with empty text, including CSV beyond preview limit."
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/files/{id}/download": {
+      "get": {
+        "summary": "GET /api/files/{id}/download",
+        "operationId": "get__api_files_id_download",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/runs/{id}/artifacts": {
+      "get": {
+        "summary": "GET /api/runs/{id}/artifacts",
+        "operationId": "get__api_runs_id_artifacts",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "POST /api/runs/{id}/artifacts",
+        "operationId": "post__api_runs_id_artifacts",
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ]
+      }
+    },
+    "/api/scenes": {
+      "get": {
+        "summary": "Owner checked file / scene operation",
+        "operationId": "get__api_scenes",
+        "x-implementation": "S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/deployment": {
+      "get": {
+        "summary": "/api/admin/deployment",
+        "operationId": "get__api_admin_deployment",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentCatalog"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-required-role": "admin"
+      }
+    },
+    "/api/catalog/tools": {
+      "get": {
+        "summary": "/api/catalog/tools",
+        "operationId": "get__api_catalog_tools",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpToolConfigList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/capabilities/resolve": {
+      "post": {
+        "summary": "/api/capabilities/resolve",
+        "operationId": "post__api_capabilities_resolve",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityPreview"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/configuration/status": {
+      "get": {
+        "summary": "/internal/configuration/status",
+        "operationId": "get__internal_configuration_status",
+        "x-implementation": "S02",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentCatalog"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ]
+      }
+    },
+    "/api/admin/runs/{id}": {
+      "get": {
+        "summary": "S03 get /api/admin/runs/{id}",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/internal/submissions/{id}": {
+      "get": {
+        "summary": "GET /internal/submissions/{id}",
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "default": {
+            "description": "Safe structured error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/internal/approval-decisions/{id}": {
+      "get": {
+        "summary": "GET /internal/approval-decisions/{id}",
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "default": {
+            "description": "Safe structured error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/internal/demo-tickets/by-execution/{id}": {
+      "get": {
+        "summary": "GET /internal/demo-tickets/by-execution/{id}",
+        "security": [
+          {
+            "RuntimeToBackend": []
+          }
+        ],
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "default": {
+            "description": "Safe structured error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/internal/approvals/{id}": {
+      "get": {
+        "summary": "GET /internal/approvals/{id}",
+        "security": [
+          {
+            "BackendToRuntime": []
+          }
+        ],
+        "x-implementation": "S04-S05",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "default": {
+            "description": "Safe structured error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/runs/{id}/sources": {
+      "get": {
+        "summary": "Read authorized run sources",
+        "operationId": "get__api_runs_id_sources",
+        "x-implementation": "S08-S15",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/files/{id}/parsed": {
+      "get": {
+        "summary": "Read owned parsed document",
+        "operationId": "get__api_files_id_parsed",
+        "x-implementation": "S16-S20",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedDocument"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Explicitly extract and cache an owned document without an Agent or model call",
+        "operationId": "post__api_files_id_extract",
+        "x-implementation": "S16-S20",
+        "responses": {
+          "200": {
+            "description": "Parsed result",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}
+          },
+          "default": {"description": "Explicit error"}
+        },
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        ]
+      }
+    },
+    "/internal/documents/extract": {
+      "post": {
+        "summary": "Run the bounded fixed parser on raw bytes; no Agent or model call",
+        "operationId": "post__internal_documents_extract",
+        "x-implementation": "S16-S20",
+        "responses": {
+          "200": {"description": "Parsed result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}},
+          "default": {"description": "Explicit error"}
+        },
+        "security": [{"ServiceBearer": []}],
+        "parameters": [
+          {"name": "X-Document-Metadata", "in": "header", "required": true, "schema": {"type": "string"}, "description": "JSON DocumentExtractMetadata; body is bounded original bytes"}
+        ]
+      }
+    },
+    "/api/files/{id}/versions": {
+      "get": {
+        "summary": "Read owned report version lineage",
+        "operationId": "get__api_files_id_versions",
+        "x-implementation": "S08-S15",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/capabilities/network": {
+      "get": {
+        "summary": "Inspect non-paid deployment capability status",
+        "operationId": "get__api_capabilities_network",
+        "x-implementation": "S08-S15",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        }
+      }
+    },
+    "/internal/files/{id}/blob": {
+      "get": {
+        "summary": "Stream a run-authorized binary input",
+        "operationId": "get__internal_files_id_blob",
+        "x-implementation": "S08-S15",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "security": [
+          {
+            "ServiceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/internal/files/{id}/parsed": {
+      "get": {
+        "summary": "Read run-authorized parsed chunks",
+        "operationId": "get__internal_files_id_parsed",
+        "x-implementation": "S16-S20",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedDocument"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "security": [
+          {
+            "ServiceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "put": {
+        "summary": "Commit a run-authorized immutable document extraction cache",
+        "operationId": "put__internal_files_id_parsed",
+        "x-implementation": "S16-S20",
+        "responses": {
+          "200": {"description": "Committed cache", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}},
+          "default": {"description": "Explicit error"}
+        },
+        "security": [{"ServiceBearer": []}],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}},
+          {"name": "run_id", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        ],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}}
+      }
+    },
+    "/internal/artifacts/blob": {
+      "post": {
+        "summary": "Publish bounded binary artifact with validated X-Artifact-Metadata",
+        "operationId": "post__internal_artifacts_blob",
+        "x-implementation": "S08-S15",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/File"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "security": [
+          {
+            "ServiceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Artifact-Metadata",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "JSON BinaryArtifactMetadata; request body is bounded raw bytes"
+          }
+        ]
+      }
+    },
+    "/internal/work-files": {
+      "get": {
+        "summary": "Read/list scoped thread work files",
+        "operationId": "get__internal_work-files",
+        "x-implementation": "S08-S15",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "security": [
+          {
+            "ServiceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "put": {
+        "summary": "CAS a scoped work file revision",
+        "operationId": "put__internal_work-files",
+        "x-implementation": "S08-S15",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkFile"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkFileWrite"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ServiceBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "UserBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Expiring browser JWT; identity from Backend"
+      },
+      "BackendToRuntime": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Distinct deployment service token"
+      },
+      "RuntimeToBackend": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Distinct reverse-direction service token"
+      },
+      "ServiceBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Internal service token; never a browser credential"
+      }
+    },
+    "schemas": {
+      "Context": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Context"
+      },
+      "Login": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Login"
+      },
+      "User": {
+        "$ref": "./jsonschema/contracts.json#/$defs/User"
+      },
+      "Token": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Token"
+      },
+      "Error": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Error"
+      },
+      "Model": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Model"
+      },
+      "Skill": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Skill"
+      },
+      "Tool": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Tool"
+      },
+      "Mcp": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Mcp"
+      },
+      "FileRef": {
+        "$ref": "./jsonschema/contracts.json#/$defs/FileRef"
+      },
+      "Snapshot": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Snapshot"
+      },
+      "HistoryMessage": {
+        "$ref": "./jsonschema/contracts.json#/$defs/HistoryMessage"
+      },
+      "Start": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Start"
+      },
+      "Scenario": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Scenario"
+      },
+      "Submit": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Submit"
+      },
+      "Submission": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Submission"
+      },
+      "Run": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Run"
+      },
+      "MessageStarted": {
+        "$ref": "./jsonschema/contracts.json#/$defs/MessageStarted"
+      },
+      "MessageDelta": {
+        "$ref": "./jsonschema/contracts.json#/$defs/MessageDelta"
+      },
+      "MessageCompleted": {
+        "$ref": "./jsonschema/contracts.json#/$defs/MessageCompleted"
+      },
+      "Progress": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Progress"
+      },
+      "Event": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Event"
+      },
+      "EventPage": {
+        "$ref": "./jsonschema/contracts.json#/$defs/EventPage"
+      },
+      "Approval": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Approval"
+      },
+      "Decision": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Decision"
+      },
+      "Resume": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Resume"
+      },
+      "Cancel": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Cancel"
+      },
+      "ToolResult": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ToolResult"
+      },
+      "File": {
+        "$ref": "./jsonschema/contracts.json#/$defs/File"
+      },
+      "ChartPoint": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ChartPoint"
+      },
+      "Chart": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Chart"
+      },
+      "ThinkingOptions": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ThinkingOptions"
+      },
+      "ProtocolOptions": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ProtocolOptions"
+      },
+      "ModelCapabilities": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ModelCapabilities"
+      },
+      "ModelWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ModelWrite"
+      },
+      "ModelConfig": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ModelConfig"
+      },
+      "ModelCatalog": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ModelCatalog"
+      },
+      "SkillWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/SkillWrite"
+      },
+      "SkillConfig": {
+        "$ref": "./jsonschema/contracts.json#/$defs/SkillConfig"
+      },
+      "McpWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/McpWrite"
+      },
+      "McpConfig": {
+        "$ref": "./jsonschema/contracts.json#/$defs/McpConfig"
+      },
+      "EnablementWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/EnablementWrite"
+      },
+      "PreferenceWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/PreferenceWrite"
+      },
+      "UserCreate": {
+        "$ref": "./jsonschema/contracts.json#/$defs/UserCreate"
+      },
+      "McpToolConfig": {
+        "$ref": "./jsonschema/contracts.json#/$defs/McpToolConfig"
+      },
+      "DiscoverRequest": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DiscoverRequest"
+      },
+      "DiscoveredTool": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DiscoveredTool"
+      },
+      "DiscoverResult": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DiscoverResult"
+      },
+      "ResolveRequest": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ResolveRequest"
+      },
+      "CapabilityValidation": {
+        "$ref": "./jsonschema/contracts.json#/$defs/CapabilityValidation"
+      },
+      "CapabilityDecision": {
+        "$ref": "./jsonschema/contracts.json#/$defs/CapabilityDecision"
+      },
+      "CapabilityPreview": {
+        "$ref": "./jsonschema/contracts.json#/$defs/CapabilityPreview"
+      },
+      "Audit": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Audit"
+      },
+      "PolicyTarget": {
+        "$ref": "./jsonschema/contracts.json#/$defs/PolicyTarget"
+      },
+      "DeploymentCatalog": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DeploymentCatalog"
+      },
+      "ModelConfigList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ModelConfigList"
+      },
+      "ModelCatalogList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ModelCatalogList"
+      },
+      "SkillConfigList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/SkillConfigList"
+      },
+      "McpConfigList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/McpConfigList"
+      },
+      "McpToolConfigList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/McpToolConfigList"
+      },
+      "UserList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/UserList"
+      },
+      "AuditList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/AuditList"
+      },
+      "RevisionWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/RevisionWrite"
+      },
+      "ThreadWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ThreadWrite"
+      },
+      "Thread": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Thread"
+      },
+      "Message": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Message"
+      },
+      "ThreadList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ThreadList"
+      },
+      "MessageList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/MessageList"
+      },
+      "SubmissionList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/SubmissionList"
+      },
+      "ApprovalList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ApprovalList"
+      },
+      "DecisionRecord": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DecisionRecord"
+      },
+      "BuiltinTool": {
+        "$ref": "./jsonschema/contracts.json#/$defs/BuiltinTool"
+      },
+      "TicketArgs": {
+        "$ref": "./jsonschema/contracts.json#/$defs/TicketArgs"
+      },
+      "TicketWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/TicketWrite"
+      },
+      "TicketResult": {
+        "$ref": "./jsonschema/contracts.json#/$defs/TicketResult"
+      },
+      "ArtifactWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ArtifactWrite"
+      },
+      "FileList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/FileList"
+      },
+      "FileContent": {
+        "$ref": "./jsonschema/contracts.json#/$defs/FileContent"
+      },
+      "AdminRun": {
+        "$ref": "./jsonschema/contracts.json#/$defs/AdminRun"
+      },
+      "DocumentChunk": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DocumentChunk"
+      },
+      "ParsedDocument": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ParsedDocument"
+      },
+      "SourceRecord": {
+        "$ref": "./jsonschema/contracts.json#/$defs/SourceRecord"
+      },
+      "SourceList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/SourceList"
+      },
+      "TaskItem": {
+        "$ref": "./jsonschema/contracts.json#/$defs/TaskItem"
+      },
+      "TaskUpdate": {
+        "$ref": "./jsonschema/contracts.json#/$defs/TaskUpdate"
+      },
+      "ContextUpdate": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ContextUpdate"
+      },
+      "WorkFileWrite": {
+        "$ref": "./jsonschema/contracts.json#/$defs/WorkFileWrite"
+      },
+      "WorkFile": {
+        "$ref": "./jsonschema/contracts.json#/$defs/WorkFile"
+      },
+      "DocumentTask": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DocumentTask"
+      },
+      "DocumentResult": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DocumentResult"
+      },
+      "DocumentExtractMetadata": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DocumentExtractMetadata"
+      },
+      "BinaryArtifactMetadata": {
+        "$ref": "./jsonschema/contracts.json#/$defs/BinaryArtifactMetadata"
+      }
+    }
+  }
+}

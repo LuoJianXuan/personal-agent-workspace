@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "checks": [
+    "Browser first-send/multi-turn: three turns, exactly three persisted assistant replies",
+    "Browser approval: exactly one committed synthetic ticket",
+    "Browser CSV upload/analysis: authoritative chart tied to uploaded file, east 15 and west 3"
+  ],
+  "chart_run": "f5ffa7a7-bd3b-4cf1-8ff4-32834bed9768",
+  "file_id": "979f38bd-425c-4dd6-af05-fef5b8ccc05a",
+  "approval_run": "6f72a650-6ead-4dcf-8655-97be4cbfe770",
+  "history_thread": "a38ab5f7-c70e-4253-8c38-bae68f5990bd",
+  "real_model_calls": 0,
+  "timestamp": "2026-11-04T11:58:40+0800"
+}

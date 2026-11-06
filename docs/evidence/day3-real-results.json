@@ -1,0 +1,93 @@
+{
+  "mode": "real",
+  "provider": "DeepSeek",
+  "protocol": "openai_chat_completions",
+  "checks": [
+    "chat_stream",
+    "history",
+    "real_mcp_tool_loop"
+  ],
+  "runs": [
+    {
+      "run_id": "d2a1eabd-5acd-4c00-ae10-d9e25b79ec3b",
+      "case": "chat_stream",
+      "status": "SUCCEEDED",
+      "error_code": "",
+      "delta_count": 7,
+      "stream_before_completion": true
+    },
+    {
+      "run_id": "fb1253df-6e8b-4fc6-806b-eb406ad06c93",
+      "case": "history",
+      "status": "SUCCEEDED",
+      "error_code": "",
+      "delta_count": 1,
+      "stream_before_completion": false
+    },
+    {
+      "run_id": "75bc018f-db28-46b3-9b70-094ac0a69764",
+      "case": "tool_loop",
+      "status": "SUCCEEDED",
+      "error_code": "",
+      "delta_count": 5,
+      "stream_before_completion": true
+    }
+  ],
+  "status": "passed",
+  "model_id": "9a2ff40c-e519-42d1-a9f5-b1f14069359e",
+  "model_revision": 1,
+  "provider_model_name": "deepseek-flash",
+  "thread_id": "9f43e733-5052-4bfa-8faa-106762e79b3b",
+  "model_calls": [
+    {
+      "mode": "real",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 499,
+        "prompt_tokens": 392,
+        "completion_tokens": 107
+      },
+      "error_code": ""
+    },
+    {
+      "mode": "real",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 526,
+        "prompt_tokens": 522,
+        "completion_tokens": 4
+      },
+      "error_code": ""
+    },
+    {
+      "mode": "real",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 635,
+        "prompt_tokens": 557,
+        "completion_tokens": 78
+      },
+      "error_code": ""
+    },
+    {
+      "mode": "real",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 775,
+        "prompt_tokens": 691,
+        "completion_tokens": 84
+      },
+      "error_code": ""
+    }
+  ],
+  "model_call_count": 4,
+  "usage_total": {
+    "prompt_tokens": 2162,
+    "completion_tokens": 273,
+    "total_tokens": 2435
+  }
+}

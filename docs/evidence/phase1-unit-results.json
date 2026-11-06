@@ -1,0 +1,28 @@
+{
+  "recorded_on": "2026-11-06",
+  "record_type": "observed_command_results",
+  "scope": "offline Runtime unit tests; transport fixtures, no real providers",
+  "command": "services/runtime/.venv/Scripts/python.exe -m unittest discover -s tests -p test_*.py -v (cwd services/runtime)",
+  "initial_run": {
+    "cases": 23,
+    "passed": 22,
+    "failed": 1,
+    "failure": "test_target_and_alias_are_bound depended on Docker-only /config/targets.json on Windows"
+  },
+  "fix": "Use a test-owned allowlist fixture via patch(app.access.policy); product policy remains unchanged",
+  "focused_rerun": {
+    "command": ".venv/Scripts/python.exe -m unittest discover -s tests -p test_access.py -k test_target -v",
+    "cases": 1,
+    "passed": 1,
+    "exit_code": 0
+  },
+  "final_state": "all 23 cases have passed across initial run and focused rerun; full suite was not rerun after the fixture-only fix",
+  "modules": {
+    "test_access": 4,
+    "test_models": 6,
+    "test_materials": 5,
+    "test_phase1": 8
+  },
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

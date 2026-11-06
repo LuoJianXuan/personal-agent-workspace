@@ -1,0 +1,14 @@
+{
+  "approval_id": "00000000-0000-4000-8000-000000000009",
+  "run_id": "00000000-0000-4000-8000-000000000007",
+  "execution_id": "00000000-0000-4000-8000-000000000010",
+  "tool_call_id": "call_1",
+  "namespaced_tool_id": "builtin.create_demo_ticket",
+  "canonical_args": "{\"amount\":1,\"note\":null,\"title\":\"演示\",\"zero\":0}",
+  "args_hash": "7698405cee3ce2e7f5080aace0cf3979e787bfe9d6025d7be96b6a37586ebe16",
+  "capability_revision": 1,
+  "expires_at": "2026-11-02T12:10:00Z",
+  "status": "PENDING",
+  "snapshot_id": "00000000-0000-4000-8000-000000000005",
+  "owner_id": "00000000-0000-4000-8000-000000000003"
+}

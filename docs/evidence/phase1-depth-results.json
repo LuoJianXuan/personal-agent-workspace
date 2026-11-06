@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-11-06T15:18:26+0800",
+  "checks": [
+    "Text PDF is parsed by a real bounded on-demand child with physical-page locator",
+    "XLSX cached values → governed Decimal aggregation → exact chart/CSV artifacts",
+    "Native file write/edit/read is scoped, versioned and audited through real Backend",
+    "Long actual tool result is offloaded through native filesystem middleware",
+    "Native summary is triggered, original history is offloaded, summary consumes model budget",
+    "Repeated native tools cannot exceed the hard 12-model-call budget"
+  ],
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

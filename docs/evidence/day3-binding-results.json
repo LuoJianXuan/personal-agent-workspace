@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "checks": [
+    "unbound run rejected",
+    "terminal submission rejected for execution",
+    "preview snapshot is not execution permission"
+  ]
+}

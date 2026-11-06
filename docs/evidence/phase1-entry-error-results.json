@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-11-06T15:18:41+0800",
+  "checks": [
+    "skill_overflow_actionable_400",
+    "unknown_model_409",
+    "unknown_skill_404",
+    "foreign_file_404",
+    "invalid_submissions_create_no_run",
+    "explicit_empty_skills_succeed"
+  ],
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

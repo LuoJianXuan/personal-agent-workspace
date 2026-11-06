@@ -1,0 +1,14 @@
+{
+  "type": "bar",
+  "file_id": "00000000-0000-4000-8000-000000000011",
+  "dimension": "category",
+  "measure": "amount",
+  "aggregation": "sum",
+  "row_count": 2,
+  "points": [
+    {
+      "label": "A",
+      "value": 10
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "researched_on": "2026-11-06",
+  "method": "primary_docs_and_source_reading_only",
+  "commercial_product_core_not_audited": [
+    "WorkBuddy"
+  ],
+  "implemented_changes": false,
+  "tests_executed": false,
+  "sources": [
+    {
+      "project": "Pi",
+      "kind": "official_source",
+      "url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/core/tools/read.ts"
+    },
+    {
+      "project": "Pi",
+      "kind": "official_documentation",
+      "url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md"
+    },
+    {
+      "project": "Nanobot",
+      "kind": "official_source",
+      "url": "https://github.com/HKUDS/nanobot/blob/main/nanobot/agent/tools/filesystem.py"
+    },
+    {
+      "project": "Nanobot",
+      "kind": "official_source",
+      "url": "https://github.com/HKUDS/nanobot/blob/main/nanobot/utils/document.py"
+    },
+    {
+      "project": "OpenClaw",
+      "kind": "official_documentation",
+      "url": "https://docs.openclaw.ai/tools/pdf"
+    },
+    {
+      "project": "OpenClaw",
+      "kind": "official_source",
+      "url": "https://github.com/openclaw/openclaw/blob/main/extensions/document-extract/document-extractor.ts"
+    },
+    {
+      "project": "Hermes",
+      "kind": "official_source",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/main/skills/productivity/pdf/SKILL.md"
+    },
+    {
+      "project": "Hermes",
+      "kind": "official_source",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/main/skills/productivity/microsoft-office/SKILL.md"
+    },
+    {
+      "project": "WorkBuddy",
+      "kind": "official_product_documentation_not_core_source",
+      "url": "https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/WorkBuddy-Zero-Cost-Skill-Top-10/Office-Document-Suite"
+    },
+    {
+      "project": "AnythingLLM",
+      "kind": "official_source",
+      "url": "https://github.com/Mintplex-Labs/anything-llm/blob/master/collector/index.js"
+    },
+    {
+      "project": "AnythingLLM",
+      "kind": "official_source",
+      "url": "https://github.com/Mintplex-Labs/anything-llm/blob/master/docker/docker-entrypoint.sh"
+    }
+  ]
+}

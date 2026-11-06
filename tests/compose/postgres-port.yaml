@@ -1,0 +1,5 @@
+# Isolated verification only. The development stack does not publish PostgreSQL.
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${TEST_POSTGRES_PORT:-55434}:5432"

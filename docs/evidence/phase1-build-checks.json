@@ -1,0 +1,58 @@
+{
+  "recorded_on": "2026-11-06",
+  "scope": "local_build_and_acceptance",
+  "checks": [
+    {
+      "name": "backend_compile",
+      "result": "passed",
+      "method": "Go build in local toolchain and Linux multi-stage Docker build"
+    },
+    {
+      "name": "web_production_build",
+      "result": "passed",
+      "method": "TypeScript + Vite during Linux Docker build",
+      "assets": [
+        "index-Ab0R6Yvj.css",
+        "index-D8piSVuX.js"
+      ],
+      "limitation": "Approximately 2.07 MB JS before gzip; production performance not benchmarked"
+    },
+    {
+      "name": "runtime_linux_images",
+      "result": "passed",
+      "services": [
+        "runtime",
+        "demo-mcp",
+        "document-worker",
+        "web-fixture",
+        "compute-broker",
+        "compute-runner-image"
+      ],
+      "method": "Docker Compose build; service startup and actual acceptance chain"
+    },
+    {
+      "name": "source_contracts_and_ast",
+      "result": "passed",
+      "details": "phase1-source-checks.json"
+    },
+    {
+      "name": "powershell_syntax",
+      "result": "passed",
+      "method": "System.Management.Automation.Language.Parser.ParseFile on scripts/*.ps1"
+    },
+    {
+      "name": "isolated_services",
+      "result": "passed",
+      "details": "phase1-environment-results.json"
+    }
+  ],
+  "business_tests": "passed_in_isolated_mock_environment",
+  "browser_tests": "passed_17_observations",
+  "docker_builds": "passed_linux_images",
+  "migrations": "passed_verification_v5_guard_repeat_checkpoint_preservation",
+  "daily_environment_switch": "not_executed",
+  "real_model_calls": 0,
+  "real_search_calls": 0,
+  "initial_static_record": "phase1-build-checks-initial-static.json",
+  "full_daily_rollback_drill": "not_executed"
+}

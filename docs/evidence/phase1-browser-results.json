@@ -1,0 +1,33 @@
+{
+  "checked_at": "2026-11-06T04:54:20.716Z",
+  "scope": "isolated localhost:5174, Mock model and local web fixture",
+  "checks": [
+    "seed user login",
+    "desktop homepage",
+    "390x844 mobile homepage",
+    "mobile navigation opens/closes",
+    "default skill overflow is actionable before submission",
+    "explicit no-skill submission",
+    "native workspace final answer and completed plan",
+    "explicit network permission and research submission",
+    "three search snippets and three read web sources",
+    "completed research survives refresh",
+    "DOCX paragraph locator and Chinese preview",
+    "v2 to v1 to v2 report selection",
+    "authenticated DOCX browser download, 37157 bytes with PK signature",
+    "full approval parameters and approve-to-ticket completion",
+    "cancel streaming/queued task and restore cancelled state after refresh",
+    "pending dispatch does not show NOT_FOUND failure",
+    "recent thread title search"
+  ],
+  "real_model_calls": 0,
+  "real_search_calls": 0,
+  "screenshots": [
+    "phase1-home-desktop.png",
+    "phase1-home-mobile.png",
+    "phase1-native-workspace.png",
+    "phase1-document-locator.png",
+    "phase1-report-versions.png",
+    "phase1-approval-completed.png"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "date": "2026-11-04",
+  "status": "passed",
+  "scope": "首版业务回归；隔离 Mock，未新增真实模型调用",
+  "api_suites": [
+    {
+      "file": "day2-api-results.json",
+      "status": "passed",
+      "check_groups": 13
+    },
+    {
+      "file": "day3-mock-results.json",
+      "status": "passed",
+      "check_groups": 9
+    },
+    {
+      "file": "day4-5-results.json",
+      "status": "passed",
+      "check_groups": 6
+    },
+    {
+      "file": "day6-fault-results.json",
+      "status": "passed",
+      "check_groups": 10
+    },
+    {
+      "file": "day6-boundary-results.json",
+      "status": "passed",
+      "check_groups": 6
+    },
+    {
+      "file": "day6-storage-results.json",
+      "status": "passed",
+      "check_groups": 2
+    },
+    {
+      "file": "day6-stream-results.json",
+      "status": "passed",
+      "check_groups": 2
+    }
+  ],
+  "api_check_groups": 48,
+  "runtime_unit_tests": 11,
+  "backend_tests": "go test ./... passed (contracts/workspace test packages)",
+  "web_build": "tsc -b && vite build passed",
+  "ui_checks": [
+    "普通用户登录、管理路由拒绝；管理员登录与后台技能创建、退出登录回到登录页",
+    "后台保存技能同步到用户目录、搜索、个人启用与正文查看",
+    "首页首次发送自动建会话；三轮正文投影无重复",
+    "Runtime 离线时刷新，已保存的最新最终回答仍显示且仅一份",
+    "任务运行中过程切换禁用，完成后恢复，取消按钮收敛",
+    "390×844 会话抽屉新建后自动关闭、输入可用",
+    "MCP 查询、审批完整参数、批准后成功、数据库仅一张工单",
+    "界面报告导出、右侧产物出现、浏览器实际下载并读取文件头",
+    "文件选择器实际上传 CSV，资料库显示新文件",
+    "从资料库进入分析，选地区/销售额/求和，图表东区 15、西区 3",
+    "Markdown 预览无 script/img/javascript 链接节点、无脚本弹窗",
+    "资料库用于对话后携带文件，真实读取工具返回晨光与预算 123",
+    "流式失败保留未完成草稿并显示 MODEL_STREAM_FAILED",
+    "页面取消运行，最终状态 CANCELLED"
+  ],
+  "real_model_calls": 0,
+  "fixed_issues": [
+    "手机新建会话后抽屉不关闭",
+    "运行中回看旧轮次错误释放发送状态",
+    "Runtime 离线导致最新已保存最终回答不展示"
+  ],
+  "limits": [
+    "没有重新请求真实模型供应商",
+    "使用已有隔离验收卷，不宣称空库首次安装验收",
+    "不覆盖生产多副本、高可用、灾备及其他协议",
+    "不是逐字段穷举每个后台表单；后台 CRUD/权限由接口全回归覆盖，页面补测技能配置到前台消费的链路"
+  ]
+}

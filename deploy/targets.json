@@ -1,0 +1,24 @@
+{
+  "models": [
+    {
+      "endpoint": "https://api.deepseek.com",
+      "credential_ref": "deepseek_primary",
+      "env_var": "DEEPSEEK_API_KEY"
+    },
+    {
+      "endpoint": "https://api.deepseek.com/v1",
+      "credential_ref": "deepseek_primary",
+      "env_var": "DEEPSEEK_API_KEY"
+    }
+  ],
+  "mcp": [
+    {
+      "endpoint": "http://demo-mcp:8001/mcp/",
+      "credential_ref": "",
+      "env_var": "",
+      "read_only_tools": [
+        "lookup_demo_order"
+      ]
+    }
+  ]
+}

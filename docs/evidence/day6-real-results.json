@@ -1,0 +1,126 @@
+{
+  "status": "passed",
+  "mode": "real",
+  "provider": "DeepSeek",
+  "authorized_calls": 8,
+  "max_output_tokens": 512,
+  "runs": [
+    {
+      "run_id": "3b4e6d06-6365-405e-8104-a2a925dadbfc"
+    },
+    {
+      "run_id": "73f633c1-5c32-4a59-8197-30ae8959d65b",
+      "status": "SUCCEEDED"
+    },
+    {
+      "run_id": "7134d3f4-6ffc-4017-a2f2-7b9d2b5f8ef9",
+      "status": "SUCCEEDED"
+    },
+    {
+      "run_id": "af07eebd-8060-4a8a-9270-bb69ffa90492",
+      "status": "SUCCEEDED"
+    }
+  ],
+  "checks": [
+    "Initial real turn queried MCP and asked in text; follow-up explicitly requests the system approval card",
+    "real DeepSeek -> real MCP -> persistent approval -> one ticket -> final answer",
+    "real selected-file read and grounded answer",
+    "real interpretation of deterministic CSV chart"
+  ],
+  "model_id": "9a2ff40c-e519-42d1-a9f5-b1f14069359e",
+  "model_revision": 1,
+  "provider_model_name": "deepseek-flash",
+  "chart_thread": "773119a5-a056-40fd-9cba-5f0433bb8ad2",
+  "model_calls": 7,
+  "usage_records": [
+    {
+      "run_id": "3b4e6d06-6365-405e-8104-a2a925dadbfc",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 944,
+        "prompt_tokens": 850,
+        "completion_tokens": 94
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "3b4e6d06-6365-405e-8104-a2a925dadbfc",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 1077,
+        "prompt_tokens": 1000,
+        "completion_tokens": 77
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "73f633c1-5c32-4a59-8197-30ae8959d65b",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 1073,
+        "prompt_tokens": 988,
+        "completion_tokens": 85
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "73f633c1-5c32-4a59-8197-30ae8959d65b",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 1322,
+        "prompt_tokens": 1231,
+        "completion_tokens": 91
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "7134d3f4-6ffc-4017-a2f2-7b9d2b5f8ef9",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 961,
+        "prompt_tokens": 899,
+        "completion_tokens": 62
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "7134d3f4-6ffc-4017-a2f2-7b9d2b5f8ef9",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 1052,
+        "prompt_tokens": 1034,
+        "completion_tokens": 18
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "af07eebd-8060-4a8a-9270-bb69ffa90492",
+      "model_revision": 1,
+      "status": "SUCCEEDED",
+      "usage": {
+        "total_tokens": 1291,
+        "prompt_tokens": 1245,
+        "completion_tokens": 46
+      },
+      "error_code": ""
+    }
+  ],
+  "timestamp": "2026-11-03T16:52:25+0800",
+  "total_provider_requests": 8,
+  "successful_provider_requests": 7,
+  "rejected_placeholder_requests": 1,
+  "rejected_placeholder_run": "2882bf1c-f409-4538-868f-f6d96d347ebc",
+  "rejected_placeholder_error": "MODEL_AUTH_FAILED",
+  "note": "Fresh regression script omitted mock override on stage restart. One placeholder-credential request received 401. Fixed shared Compose list and added Runtime mock-only admission guard. No more provider requests authorized in this task.",
+  "usage_total": {
+    "prompt_tokens": 7247,
+    "completion_tokens": 473,
+    "total_tokens": 7720
+  }
+}

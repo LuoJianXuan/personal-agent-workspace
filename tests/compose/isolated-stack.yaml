@@ -1,0 +1,12 @@
+# Isolated verification only. The credential below is an explicit non-secret fixture.
+services:
+  backend:
+    image: ${COMPOSE_PROJECT_NAME:?Use an explicit test project}-backend:phase1
+  runtime:
+    image: ${COMPOSE_PROJECT_NAME:?Use an explicit test project}-runtime:phase1
+    environment:
+      DEEPSEEK_API_KEY: acceptance-placeholder-not-a-real-key
+  demo-mcp:
+    image: ${COMPOSE_PROJECT_NAME:?Use an explicit test project}-demo-mcp:phase1
+  web:
+    image: ${COMPOSE_PROJECT_NAME:?Use an explicit test project}-web:phase1

@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-11-06T12:53:15+0800",
+  "checks": [
+    "harness_compute_artifact",
+    "api_compute_cancel"
+  ],
+  "run_id": "f8ee47f0-1ecc-425c-8795-298d69077641",
+  "cancelled_run_id": "a0fc4d0e-fe07-4bc5-8038-ea9ca87d652e",
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

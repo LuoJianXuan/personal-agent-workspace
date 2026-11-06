@@ -1,0 +1,9 @@
+# Verification only: Mock replaces only the model, not PG/graph/MCP/events.
+services:
+  backend:
+    environment:
+      MODEL_MODE: mock
+  runtime:
+    environment:
+      ALLOW_MOCK: "true"
+      MODEL_MODE: mock

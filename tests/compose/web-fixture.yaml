@@ -1,0 +1,12 @@
+services:
+  runtime:
+    environment:
+      ENABLE_PUBLIC_WEB: "true"
+      NETWORK_FIXTURE_URL: http://web-fixture:8003
+  web-fixture:
+    build:
+      # Compose resolves override paths from the project/root compose file.
+      context: ./services/runtime
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+    command: [uvicorn, app.web_fixture:app, --host, "0.0.0.0", --port, "8003", --no-access-log]

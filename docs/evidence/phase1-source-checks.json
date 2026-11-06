@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-11-06T07:42:06.995760+00:00",
+  "kind": "static_source_only",
+  "python_ast_files": 59,
+  "schema_copies": 3,
+  "schema_examples": {
+    "phase1-source.json": "SourceRecord",
+    "phase1-document.json": "ParsedDocument",
+    "phase1-work-file.json": "WorkFileWrite",
+    "phase1-artifact.json": "BinaryArtifactMetadata",
+    "phase1-task-event.json": "Event"
+  },
+  "openapi_security_references": "declared",
+  "legacy_loop_and_sse_parser": "removed",
+  "business_tests": "not_run_by_this_static_command",
+  "browser_tests": "not_run_by_this_static_command",
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

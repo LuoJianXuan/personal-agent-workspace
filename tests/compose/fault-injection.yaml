@@ -1,0 +1,16 @@
+# Isolated verification only. Never add this override to the development project.
+services:
+  backend:
+    environment:
+      FILE_ROOT: ${FAULT_FILE_ROOT:-/data/files}
+      ENABLE_FAULTS: "true"
+      FAULT_PAUSE_RESUME_DELIVERY: ${FAULT_PAUSE_RESUME_DELIVERY:-false}
+      FAULT_TICKET_RESPONSE_LOST: ${FAULT_TICKET_RESPONSE_LOST:-false}
+      FAULT_TICKET_QUERY_UNAVAILABLE: ${FAULT_TICKET_QUERY_UNAVAILABLE:-false}
+      FAULT_ARTIFACT_METADATA: ${FAULT_ARTIFACT_METADATA:-false}
+  runtime:
+    environment:
+      ENABLE_FAULTS: "true"
+      FAULT_AFTER_WAIT_CHECKPOINT: ${FAULT_AFTER_WAIT_CHECKPOINT:-false}
+      FAULT_AFTER_TICKET_COMMIT: ${FAULT_AFTER_TICKET_COMMIT:-false}
+      APPROVAL_TTL_SECONDS: ${APPROVAL_TTL_SECONDS:-600}

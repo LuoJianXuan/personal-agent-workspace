@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "checks": [
+    "A02: login, admin-only CRUD/catalog policy, unauthenticated denial",
+    "A03: protocol-first model CRUD, strict options, credential/target binding, safe catalog, no paid probe",
+    "A03: single default, optimistic concurrency, platform label does not choose protocol",
+    "A04: real skill CRUD, personal preferences isolated, markdown stored, concurrent edit conflict",
+    "A05: real SDK initialize/list_tools, default-denied tools, explicit enablement, namespace isolation",
+    "Capability resolution persists a frozen snapshot, private credentials hidden, owner/context checked",
+    "A06: skill/tool/MCP revocation invalidates snapshots; changed discovery schema requires reauthorization",
+    "MCP unavailable yields persisted visible failure and recovers after provider restart",
+    "Demo provider: real SDK call_tool covers matching and no-match synthetic orders (not Agent loop)",
+    "A03/A06: capability mismatch, disabled model and missing default fail explicitly without fallback",
+    "Skill preference overflow requires explicit selection; explicit empty list stays empty",
+    "User creation is ordinary-only; duplicate handling, disable revokes token/snapshot, administrator protected",
+    "Audit redaction, repeatable migration and configuration persistence across service restart"
+  ],
+  "resources": {
+    "model": "b83bb6b5-bae7-4fb4-af3e-2874716fa0a5",
+    "skill": "62a79a86-9e02-494c-8ef3-71c84e76eeba",
+    "mcp": "672da68d-b0ee-444e-9ee4-ae7872680bce"
+  },
+  "model_calls": 0,
+  "scope": "isolated agent-workspace-verification; placeholder credential checks presence only"
+}

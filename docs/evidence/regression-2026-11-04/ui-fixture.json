@@ -1,0 +1,10 @@
+{
+  "model_id": "59ead66b-0af7-46ed-9fc6-e7c19f197b67",
+  "model_name": "Delivery 2511ec38",
+  "skill_id": "a8f4c300-17ba-4edf-a42b-918bbb9ed1c6",
+  "skill_name": "回归技能 2511ec38",
+  "csv_id": "e78f5f09-d5bb-49c0-8f23-f7bcf0200b51",
+  "text_id": "eca1dd2f-3382-44dc-bc90-f66135e7d81d",
+  "malicious_file": "5a5b2288-26a0-49ea-935b-9f89dee7563a",
+  "real_model_calls": 0
+}

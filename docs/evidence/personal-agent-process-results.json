@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "child environment allowlist excludes deployment credentials",
+    "real parser child cancellation kills and waits",
+    "real parser timeout kills and releases the only slot"
+  ],
+  "fixture_bytes": 401209,
+  "parser_processes_after": 0,
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

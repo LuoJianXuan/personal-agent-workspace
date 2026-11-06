@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "checks": [
+    "A19/A20/A25: CSV row/column/size limits, file owner references and path rejection, inert bytes preserved for safe rendering",
+    "A22: average/count and line chart match fixed expected values",
+    "A25: model-requested file outside frozen selection is denied by Tool Gateway",
+    "A16: concurrent cancel/approve converges to cancelled, no duplicate write",
+    "A27: queue admission at 32, existing idempotent replay and 33rd rejection without insertion; full-queue approval remains resumable and succeeds once capacity returns",
+    "A23: run metadata and audit correlate while private content and deployment secrets stay out"
+  ],
+  "real_model_calls": 0,
+  "malicious_file": "edbe5ffc-b411-4e94-b92b-97167682340a",
+  "timestamp": "2026-11-06T15:13:14+0800"
+}

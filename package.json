@@ -1,0 +1,10 @@
+{
+  "name": "agent-workspace",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "contracts": "python scripts/generate-contracts.py"
+  }
+}

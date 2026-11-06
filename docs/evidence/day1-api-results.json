@@ -1,0 +1,13 @@
+{
+  "passed": [
+    "pre-migration health=200 ready=503 on both services",
+    "runtime rejects incomplete checkpoint setup",
+    "three identities, login, admin authorization, invalid auth, unknown fields, public internal-path blocking",
+    "disabled account immediately rejects previously issued token; restored afterward",
+    "correctly signed expired token rejected",
+    "repeated migrations and changed seed password preserve existing identities/passwords",
+    "both service roles can write own schema and cannot read foreign schema; no elevated role flags",
+    "missing and wrong-direction service credentials rejected",
+    "database outage preserves process health, fails readiness and recovers login"
+  ]
+}

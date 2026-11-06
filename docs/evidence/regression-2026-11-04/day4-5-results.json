@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "checks": [
+    "A12/A20: full bound approval, owner isolation, concurrent same decision, exactly one ticket",
+    "A13: durable LangGraph interrupt survives Runtime restart with same approval and one write",
+    "A11/A16: rejected approval and cancellation during wait/stream terminate without writes",
+    "A19/A20: authorized material uses real storage/read tool; cross-owner access denied and hash matches download",
+    "A21/A22: fixed Decimal totals, source-bound chart/CSV, real downloads, idempotent report without model calls",
+    "File extension, encoding, text limit, CSV headers and maximum references enforced"
+  ],
+  "mode": "mock",
+  "real_model_calls": 0,
+  "approval_run": "6a9abd4f-8775-4273-87ea-b28e8dff0f17",
+  "chart_run": "5744f560-07cc-49d8-a9cc-56ee7450444c",
+  "file_id": "a43e6e56-d787-4f64-b0e0-c27cfd741709",
+  "timestamp": "2026-11-04T11:32:37+0800"
+}

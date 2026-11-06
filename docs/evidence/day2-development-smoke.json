@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "checked_routes": [
+    "/auth/me",
+    "/admin/models",
+    "/admin/skills",
+    "/admin/mcp-connections",
+    "/admin/users",
+    "/admin/audits",
+    "/admin/deployment",
+    "/catalog/models",
+    "/catalog/skills",
+    "/catalog/tools"
+  ],
+  "model_credential_configured": true,
+  "unconfigured_run_result": "MODEL_UNAVAILABLE",
+  "model_calls": 0,
+  "account_data_preserved": true
+}

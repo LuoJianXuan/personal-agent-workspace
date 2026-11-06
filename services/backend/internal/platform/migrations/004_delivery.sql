@@ -1,0 +1,7 @@
+CREATE TABLE backend.approval_decisions(decision_id uuid PRIMARY KEY,approval_id uuid UNIQUE NOT NULL,run_id uuid NOT NULL REFERENCES backend.run_submissions(run_id),owner_id uuid NOT NULL REFERENCES backend.users(id),decision text NOT NULL CHECK(decision IN ('approve','reject')),proposal jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE backend.run_commands(command_id uuid PRIMARY KEY,run_id uuid NOT NULL REFERENCES backend.run_submissions(run_id),kind text NOT NULL CHECK(kind IN ('resume','cancel')),payload jsonb NOT NULL,delivered boolean NOT NULL DEFAULT false,next_attempt timestamptz NOT NULL DEFAULT now());
+CREATE TABLE backend.demo_tickets(id uuid PRIMARY KEY,run_id uuid UNIQUE NOT NULL REFERENCES backend.run_submissions(run_id),execution_id uuid UNIQUE NOT NULL,args_hash text NOT NULL,result jsonb NOT NULL);
+CREATE TABLE backend.demo_write_results(execution_id uuid PRIMARY KEY,run_id uuid NOT NULL REFERENCES backend.run_submissions(run_id),request_hash text NOT NULL,result jsonb NOT NULL);
+CREATE TABLE backend.files(id uuid PRIMARY KEY,owner_id uuid NOT NULL REFERENCES backend.users(id),run_id uuid REFERENCES backend.run_submissions(run_id),artifact_key text,data jsonb NOT NULL,storage_key text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(run_id,artifact_key));
+CREATE INDEX files_owner ON backend.files(owner_id,created_at DESC);
+INSERT INTO backend.schema_migrations(version) VALUES(4);

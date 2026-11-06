@@ -1,0 +1,82 @@
+{
+  "recorded_on": "2026-11-06",
+  "scope": "build_import_and_static_only",
+  "checks": [
+    {
+      "name": "backend_compile",
+      "observed_on": "2026-11-05",
+      "working_directory": "services/backend",
+      "command": "go build ./...",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "name": "web_production_build",
+      "observed_on": "2026-11-05",
+      "command": "pnpm --filter web build",
+      "exit_code": 0,
+      "result": "passed",
+      "assets": [
+        "index-Ab0R6Yvj.css",
+        "index-Brg4czqx.js"
+      ],
+      "limitation": "Vite reported a large JS chunk, approximately 2.07 MB before gzip. No browser check was performed."
+    },
+    {
+      "name": "runtime_imports",
+      "observed_on": "2026-11-06",
+      "modules": [
+        "app.main",
+        "app.demo_mcp",
+        "app.harness",
+        "app.document_worker",
+        "app.compute_broker"
+      ],
+      "exit_code": 0,
+      "result": "passed",
+      "limitation": "No lifespan, database connection, Agent construction or model invocation."
+    },
+    {
+      "name": "source_contracts_and_ast",
+      "observed_on": "2026-11-06",
+      "command": "services/runtime/.venv/Scripts/python.exe -X utf8 scripts/check-phase1-source.py",
+      "exit_code": 0,
+      "result": "passed",
+      "details": "phase1-source-checks.json"
+    },
+    {
+      "name": "powershell_syntax",
+      "observed_on": "2026-11-06",
+      "method": "System.Management.Automation.Language.Parser.ParseFile on scripts/*.ps1",
+      "exit_code": 0,
+      "result": "passed",
+      "limitation": "Scripts parsed, not executed."
+    },
+    {
+      "name": "isolated_compose_images",
+      "observed_on": "2026-11-06",
+      "method": "Docker Compose config --images with explicit verification project, compute profile, and process-local placeholder secrets",
+      "exit_code": 0,
+      "result": "passed_after_fixing_shared_image_tags",
+      "images": [
+        "agent-workspace-verification-runtime:phase1",
+        "agent-workspace-verification-python-runner:phase1",
+        "agent-workspace-verification-demo-mcp:phase1",
+        "agent-workspace-verification-web-fixture",
+        "agent-workspace-verification-backend:phase1",
+        "docker.io/library/postgres:17.5-bookworm",
+        "agent-workspace-verification-document-worker",
+        "agent-workspace-verification-web:phase1",
+        "agent-workspace-verification-compute-broker"
+      ],
+      "limitation": "Configuration parsing only. No image build, container start, migration or test."
+    }
+  ],
+  "business_tests": "not_executed",
+  "browser_tests": "not_executed",
+  "docker_builds": "not_executed",
+  "migrations": "not_executed",
+  "daily_environment_switch": "not_executed",
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

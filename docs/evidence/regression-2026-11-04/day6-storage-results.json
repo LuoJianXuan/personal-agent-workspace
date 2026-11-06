@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "checks": [
+    "A21: unwritable storage yields 503 and zero READY files; retry works",
+    "A19/A21: missing physical object is a visible failure, repeated export cannot pretend READY; restored download hash matches"
+  ],
+  "real_model_calls": 0,
+  "timestamp": "2026-11-04T11:38:38+0800"
+}

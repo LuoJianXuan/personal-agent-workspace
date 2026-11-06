@@ -1,0 +1,142 @@
+{
+  "status": "passed",
+  "provider": "DeepSeek",
+  "protocol": "openai_chat_completions",
+  "authorized_calls": 12,
+  "max_output_tokens": 4096,
+  "runs": [
+    {
+      "run_id": "c2ce953e-f278-49d8-a693-77629a32ddd5",
+      "trace_url": "http://localhost:3000/project/personal-agent-demo/traces/b594431caedb6b35337e3ad49a45e2a8",
+      "status": "SUCCEEDED"
+    },
+    {
+      "run_id": "abea874e-6a7b-4563-816a-5607d962888b",
+      "trace_url": "http://localhost:3000/project/personal-agent-demo/traces/479f2f1a86ba8ee035313ebddb1cc0e0",
+      "status": "SUCCEEDED"
+    }
+  ],
+  "checks": [
+    "real DeepSeek invoked on-demand DOCX material tool and grounded the final answer",
+    "real DeepSeek completed the MCP tool loop and grounded the final answer",
+    "each real Agent run exported model and tool observations to the dedicated Langfuse project",
+    "physical provider requests stayed within the 12-request guard and all completed successfully"
+  ],
+  "model_id": "492959b0-eb6f-4bea-87c3-c27d588a511b",
+  "model_revision": 1,
+  "provider_model_name": "deepseek-flash",
+  "langfuse": [
+    {
+      "trace_id": "b594431caedb6b35337e3ad49a45e2a8",
+      "count": 18,
+      "types": [
+        "AGENT",
+        "CHAIN",
+        "GENERATION",
+        "TOOL"
+      ],
+      "names": [
+        "ChatCompletionsModel",
+        "HumanInTheLoopMiddleware.after_model",
+        "ModelCallLimitMiddleware.after_model",
+        "ModelCallLimitMiddleware.before_model",
+        "PatchToolCallsMiddleware.before_agent",
+        "TodoListMiddleware.after_model",
+        "ToolCallLimitMiddleware.after_model",
+        "builtin_read_material",
+        "model",
+        "personal-agent-run",
+        "tools"
+      ]
+    },
+    {
+      "trace_id": "479f2f1a86ba8ee035313ebddb1cc0e0",
+      "count": 18,
+      "types": [
+        "AGENT",
+        "CHAIN",
+        "GENERATION",
+        "TOOL"
+      ],
+      "names": [
+        "ChatCompletionsModel",
+        "HumanInTheLoopMiddleware.after_model",
+        "ModelCallLimitMiddleware.after_model",
+        "ModelCallLimitMiddleware.before_model",
+        "PatchToolCallsMiddleware.before_agent",
+        "TodoListMiddleware.after_model",
+        "ToolCallLimitMiddleware.after_model",
+        "mcp_14f1f3a5698d4f5699312292ec9fcd69_af3c8c684565fca7a5710c4c",
+        "model",
+        "personal-agent-run",
+        "tools"
+      ]
+    }
+  ],
+  "model_calls": [
+    {
+      "run_id": "c2ce953e-f278-49d8-a693-77629a32ddd5",
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 5255,
+        "total_tokens": 5318,
+        "output_tokens": 63,
+        "input_token_details": {
+          "cache_read": 0
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "c2ce953e-f278-49d8-a693-77629a32ddd5",
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 5575,
+        "total_tokens": 5588,
+        "output_tokens": 13,
+        "input_token_details": {
+          "cache_read": 5248
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "abea874e-6a7b-4563-816a-5607d962888b",
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 5180,
+        "total_tokens": 5260,
+        "output_tokens": 80,
+        "input_token_details": {
+          "cache_read": 0
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    },
+    {
+      "run_id": "abea874e-6a7b-4563-816a-5607d962888b",
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 5316,
+        "total_tokens": 5343,
+        "output_tokens": 27,
+        "input_token_details": {
+          "cache_read": 5120
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    }
+  ],
+  "physical_request_count": 4,
+  "usage_total": {
+    "input_tokens": 21326,
+    "output_tokens": 183,
+    "total_tokens": 21509,
+    "cache_read_input_tokens": 10368
+  },
+  "timestamp": "2026-11-06T16:37:59+0800"
+}

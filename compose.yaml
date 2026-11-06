@@ -1,0 +1,145 @@
+name: agent-workspace
+services:
+  postgres:
+    image: ${DOCKER_REGISTRY:-docker.io}/library/postgres:17.5-bookworm
+    environment:
+      POSTGRES_USER: workspace_admin
+      POSTGRES_DB: workspace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      BACKEND_DB_PASSWORD: ${BACKEND_DB_PASSWORD:?Set BACKEND_DB_PASSWORD}
+      RUNTIME_DB_PASSWORD: ${RUNTIME_DB_PASSWORD:?Set RUNTIME_DB_PASSWORD}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+      - ./deploy/postgres/phase1.sql:/opt/phase1.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U workspace_admin -d workspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    build:
+      context: ./services/backend
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+    environment:
+      BACKEND_DATABASE_URL: "host=postgres port=5432 user=workspace_backend password=${BACKEND_DB_PASSWORD} dbname=workspace sslmode=disable search_path=backend connect_timeout=3"
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      BACKEND_TO_RUNTIME_TOKEN: ${BACKEND_TO_RUNTIME_TOKEN:?Set service token}
+      RUNTIME_TO_BACKEND_TOKEN: ${RUNTIME_TO_BACKEND_TOKEN:?Set service token}
+      RUNTIME_URL: http://runtime:8000
+      MODEL_MODE: ${MODEL_MODE:-real}
+      TENANT_ID: ${TENANT_ID:?Set TENANT_ID}
+      PROJECT_ID: ${PROJECT_ID:?Set PROJECT_ID}
+      TOKEN_TTL_HOURS: ${TOKEN_TTL_HOURS:-8}
+      SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:?Set administrator name}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Set administrator password}
+      SEED_USER_A_USERNAME: ${SEED_USER_A_USERNAME:?Set user A name}
+      SEED_USER_A_PASSWORD: ${SEED_USER_A_PASSWORD:?Set user A password}
+      SEED_USER_B_USERNAME: ${SEED_USER_B_USERNAME:?Set user B name}
+      SEED_USER_B_PASSWORD: ${SEED_USER_B_PASSWORD:?Set user B password}
+      FILE_ROOT: /data/files
+      ACCESS_POLICY_PATH: /config/targets.json
+    volumes:
+      - files:/data/files
+      - ./deploy/targets.json:/config/targets.json:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://localhost:8080/ready]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  runtime:
+    build:
+      context: ./services/runtime
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+    environment:
+      RUNTIME_DATABASE_URL: "host=postgres port=5432 user=workspace_runtime password=${RUNTIME_DB_PASSWORD} dbname=workspace sslmode=disable connect_timeout=3"
+      BACKEND_TO_RUNTIME_TOKEN: ${BACKEND_TO_RUNTIME_TOKEN:?Set service token}
+      RUNTIME_TO_BACKEND_TOKEN: ${RUNTIME_TO_BACKEND_TOKEN:?Set service token}
+      ACCESS_POLICY_PATH: /config/targets.json
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      ALLOW_MOCK: ${ALLOW_MOCK:-false}
+      BACKEND_URL: http://backend:8080
+      ENABLE_PUBLIC_WEB: ${ENABLE_PUBLIC_WEB:-false}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      SEARCH_CALL_BUDGET: ${SEARCH_CALL_BUDGET:-}
+      SEARCH_CALL_BUDGET_SINCE: ${SEARCH_CALL_BUDGET_SINCE:-}
+      COMPUTE_BROKER_URL: ${COMPUTE_BROKER_URL:-}
+      COMPUTE_BROKER_TOKEN: ${COMPUTE_BROKER_TOKEN:-}
+      LANGSMITH_TRACING: "false"
+      LANGCHAIN_TRACING_V2: "false"
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL:-}
+      LANGFUSE_PUBLIC_URL: ${LANGFUSE_PUBLIC_URL:-}
+      LANGFUSE_PROJECT_ID: ${LANGFUSE_PROJECT_ID:-}
+      LANGFUSE_TRACING_ENABLED: ${LANGFUSE_TRACING_ENABLED:-false}
+      LANGFUSE_TRACING_ENVIRONMENT: ${LANGFUSE_TRACING_ENVIRONMENT:-local}
+    volumes:
+      - ./deploy/targets.json:/config/targets.json:ro
+    mem_limit: 1024m
+    pids_limit: 96
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import os,urllib.request; r=urllib.request.Request('http://localhost:8000/internal/ready',headers={'Authorization':'Bearer '+os.environ['BACKEND_TO_RUNTIME_TOKEN']}); urllib.request.urlopen(r,timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:80"
+    depends_on:
+      backend: {condition: service_healthy}
+  demo-mcp:
+    build:
+      context: ./services/runtime
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+    command: [python, -m, app.demo_mcp]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8001/health',timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  compute-runner-image:
+    profiles: [compute]
+    image: ${COMPOSE_PROJECT_NAME:-agent-workspace}-python-runner:phase1
+    build:
+      context: ./services/compute-runner
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+    command: [/bin/true]
+    network_mode: none
+
+  compute-broker:
+    profiles: [compute]
+    build:
+      context: ./services/runtime
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-docker.io}
+    user: "0:0"
+    command: [uvicorn, app.compute_broker:app, --host, "0.0.0.0", --port, "8002", --no-access-log]
+    environment:
+      COMPUTE_BROKER_TOKEN: ${COMPUTE_BROKER_TOKEN:-}
+      COMPUTE_NAMESPACE: ${COMPOSE_PROJECT_NAME:-agent-workspace}-compute
+      COMPUTE_RUNNER_IMAGE: ${COMPOSE_PROJECT_NAME:-agent-workspace}-python-runner:phase1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - compute-state:/state
+    mem_limit: 512m
+    pids_limit: 64
+
+volumes:
+  pg-data:
+  files:
+  compute-state:

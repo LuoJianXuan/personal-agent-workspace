@@ -1,0 +1,19 @@
+{
+  "checks": [
+    "legacy active run rejects migration",
+    "drained v6 migration is repeatable",
+    "existing new checkpoint rows are preserved",
+    "pre-migration custom dump restores into an isolated temporary database",
+    "files archive is readable"
+  ],
+  "checkpoint_rows_preserved": 2169,
+  "restored_backend_versions": "1,2,3,4,5",
+  "restored_runtime_versions": "1,3,4,5",
+  "restored_files": 102,
+  "restored_parsed_documents": 18,
+  "restored_runs": 183,
+  "files_archive_entries": 103,
+  "database_backup_sha256": "4D58640F0B58EE2EFB8D90A43ABBEE1E0C00CD2B0EC85DED47251B8054D89DF8",
+  "files_backup_sha256": "5F768284D43DBFCE017233C1773C30266F865216DB46C3497A14E86A0D6A7D8C",
+  "temporary_restore_database_removed": true
+}

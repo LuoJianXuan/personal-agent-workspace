@@ -1,0 +1,1 @@
+{"checks": ["legacy active run rejects migration", "drained v5 migration is repeatable", "existing new checkpoint rows are preserved"], "checkpoint_rows_preserved": 1312, "real_model_calls": 0, "real_search_calls": 0}

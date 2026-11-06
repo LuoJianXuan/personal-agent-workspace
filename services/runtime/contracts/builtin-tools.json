@@ -1,0 +1,221 @@
+[
+  {
+    "namespaced_tool_id": "builtin_create_demo_ticket",
+    "description": "为合成演示订单创建一张内部工单。必须先获得本次用户批准；只处理 DEMO-xxxx，参数完整展示给用户。",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "pattern": "^DEMO-[0-9]{4}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "order_id",
+        "title",
+        "description"
+      ]
+    },
+    "revision": 1
+  },
+  {
+    "namespaced_tool_id": "builtin_read_material",
+    "description": "读取或检索本轮授权材料，返回可定位段落/页和来源引用；支持 TXT/MD/CSV、文字型 PDF/DOCX、基础 XLSX。",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        }
+      },
+      "required": [
+        "file_id"
+      ]
+    },
+    "revision": 2
+  },
+  {
+    "namespaced_tool_id": "builtin_csv_summary",
+    "description": "对授权 CSV 使用固定程序分组聚合，生成图表 JSON 和汇总 CSV；禁止自行编写代码。",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "dimension": {
+          "type": "string"
+        },
+        "measure": {
+          "type": "string"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": [
+            "sum",
+            "count",
+            "avg"
+          ]
+        },
+        "chart_type": {
+          "type": "string",
+          "enum": [
+            "bar",
+            "line"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "sheet": {
+          "type": "string",
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "file_id",
+        "dimension",
+        "measure",
+        "aggregation",
+        "chart_type"
+      ]
+    },
+    "revision": 2
+  },
+  {
+    "namespaced_tool_id": "builtin_web_search",
+    "description": "搜索公开网页，仅当本轮允许联网且部署配置已就绪。摘要不是已核对正文。",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "max_results": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "revision": 1
+  },
+  {
+    "namespaced_tool_id": "builtin_fetch_page",
+    "description": "只读公开 HTTP(S) 网页，返回段落和 source_id；不执行网页脚本或使用登录态。",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "maxLength": 3000
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "revision": 1
+  },
+  {
+    "namespaced_tool_id": "builtin_publish_report",
+    "description": "发布本轮 Markdown 报告，可附 DOCX。引用必须来自本轮真实已读取来源；parent_file_id 必须本轮授权。",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 100000
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 30
+        },
+        "parent_file_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "docx": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "title",
+        "content",
+        "source_ids"
+      ]
+    },
+    "revision": 1
+  },
+  {
+    "namespaced_tool_id": "builtin_python",
+    "description": "在已配置的隔离 Python 中处理本轮授权输入。固定依赖为标准库、openpyxl、python-docx；禁网、无 shell 工具、禁止安装依赖。读取 /work/manifest.json 获取输入路径 /work/inputs/{file_id}；只将最终文件写入 /work/outputs/。输出最多5个CSV/Markdown/DOCX/Chart JSON，总计10MiB、单个5MiB。JSON仅接受图表契约，不能输出任意JSON；XLSX只作输入。未配置时工具不开放。",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "maxLength": 30000
+        },
+        "file_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "code",
+        "file_ids"
+      ]
+    },
+    "revision": 2
+  }
+]

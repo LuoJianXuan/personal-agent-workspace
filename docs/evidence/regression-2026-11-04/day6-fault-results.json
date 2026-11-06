@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "checks": [
+    "A11: approval expiry releases run and produces zero tickets",
+    "A14: saved interrupt before WAITING publication repaired after restart, same execution succeeds once",
+    "A13: persisted decision/command survives backend/runtime restart and produces one ticket",
+    "A15: committed ticket with lost response is queried by original execution, not written again",
+    "A15: query unavailable leaves explicit UNKNOWN and one ticket, no blind retry",
+    "A16: cancel after committed write preserves/reconciles actual ticket, does not claim rollback",
+    "A17: disabling model during wait revokes approval execution and releases run",
+    "A27: five durable approvals release all worker slots, ordinary work continues",
+    "A21: metadata and physical storage failure expose no READY artifact; explicit retry creates downloadable report",
+    "A26: file and run history survive service restart"
+  ],
+  "real_model_calls": 0,
+  "timestamp": "2026-11-04T11:37:07+0800"
+}

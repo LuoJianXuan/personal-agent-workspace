@@ -1,0 +1,36 @@
+{
+  "recorded_on": "2026-11-06",
+  "compose_project": "agent-workspace-verification",
+  "web_url": "http://127.0.0.1:5174",
+  "postgres_host_port": 55434,
+  "runtime_mode": "mock",
+  "web_upstream": "explicit local web-fixture on port 8003",
+  "healthy_services": [
+    "postgres",
+    "backend",
+    "runtime",
+    "demo-mcp"
+  ],
+  "running_services": [
+    "web",
+    "document-worker",
+    "web-fixture"
+  ],
+  "backend_schema_version": 5,
+  "runtime_schema_version": 5,
+  "active_runs": 0,
+  "real_model_calls_today": 0,
+  "real_search_calls": 0,
+  "ui_approval_run": "70ab2c11-de20-4439-8815-58f47d62f210",
+  "ui_approval_ticket_count": 1,
+  "compute_broker": "stopped after verification; Runtime restored without compute configuration",
+  "labelled_job_containers": 0,
+  "labelled_job_volumes": 0,
+  "web_assets": [
+    "index-Ab0R6Yvj.css",
+    "index-D8piSVuX.js"
+  ],
+  "daily_5173_switch": "not_executed",
+  "daily_backup_restore_drill": "not_executed",
+  "company_services": "not_modified"
+}

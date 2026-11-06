@@ -1,0 +1,99 @@
+{
+  "recorded_on": "2026-11-06",
+  "result": "passed_local_scope",
+  "report": "../phase1-acceptance-2026-11-06.md",
+  "groups": [
+    {
+      "evidence": "day2-api-results.json",
+      "check_groups": 13,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "day3-mock-results.json",
+      "check_groups": 9,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "day4-5-results.json",
+      "check_groups": 6,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "day6-fault-results.json",
+      "check_groups": 10,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "day6-boundary-results.json",
+      "check_groups": 6,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "day6-storage-results.json",
+      "check_groups": 2,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "day6-stream-results.json",
+      "check_groups": 2,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "phase1-integration-results.json",
+      "check_groups": 7,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "phase1-depth-results.json",
+      "check_groups": 6,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "phase1-entry-error-results.json",
+      "check_groups": 6,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "phase1-compute-results.json",
+      "check_groups": 8,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "phase1-compute-flow-results.json",
+      "check_groups": 2,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "phase1-migration-results.json",
+      "check_groups": 3,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    },
+    {
+      "evidence": "phase1-browser-results.json",
+      "check_groups": 17,
+      "result": "passed",
+      "source": "observed successful commands and browser operations; curated evidence"
+    }
+  ],
+  "unit_cases": 23,
+  "unit_evidence": "phase1-unit-results.json",
+  "counts_are_not_unique_assertions": true,
+  "real_model_calls": 0,
+  "real_search_calls": 0,
+  "daily_switch": "not_executed",
+  "full_daily_rollback": "not_executed",
+  "provider_quality": "not_verified"
+}

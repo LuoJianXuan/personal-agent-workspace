@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-06",
+  "checks": [
+    "DOCX upload only saves; explicit on-demand fixed parser creates scoped cache",
+    "Harness material comparison → real sources → Markdown/DOCX artifacts",
+    "Report v2 preserves v1 and validates source ownership",
+    "Parsed document and source API deny foreign owner",
+    "Explicit test upstream: search → three reads → cited report; not real internet evidence",
+    "Public web tool refuses loopback even in fixture mode",
+    "Post-run DOCX format export uses stored results without another model call"
+  ],
+  "real_model_calls": 0,
+  "real_search_calls": 0,
+  "browser": "not executed by this script"
+}

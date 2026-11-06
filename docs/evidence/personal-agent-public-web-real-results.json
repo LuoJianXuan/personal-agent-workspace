@@ -1,0 +1,71 @@
+{
+  "status": "passed",
+  "run_id": "677e3073-6f05-4624-863f-85a6c7ad7fc5",
+  "trace_url": "http://localhost:3000/project/personal-agent-demo/traces/aea0d72a3df70b1304e09028e7cf649f",
+  "url": "https://example.com/",
+  "source_count": 1,
+  "external_calls": {
+    "fetch": 1,
+    "search": 0
+  },
+  "model_call_count": 2,
+  "model_calls": [
+    {
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 5366,
+        "total_tokens": 5414,
+        "output_tokens": 48,
+        "input_token_details": {
+          "cache_read": 4736
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    },
+    {
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 5621,
+        "total_tokens": 5707,
+        "output_tokens": 86,
+        "input_token_details": {
+          "cache_read": 5376
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    }
+  ],
+  "langfuse": {
+    "trace_id": "aea0d72a3df70b1304e09028e7cf649f",
+    "count": 18,
+    "types": [
+      "AGENT",
+      "CHAIN",
+      "GENERATION",
+      "TOOL"
+    ],
+    "names": [
+      "ChatCompletionsModel",
+      "HumanInTheLoopMiddleware.after_model",
+      "ModelCallLimitMiddleware.after_model",
+      "ModelCallLimitMiddleware.before_model",
+      "PatchToolCallsMiddleware.before_agent",
+      "TodoListMiddleware.after_model",
+      "ToolCallLimitMiddleware.after_model",
+      "builtin_fetch_page",
+      "model",
+      "personal-agent-run",
+      "tools"
+    ]
+  },
+  "checks": [
+    "real DeepSeek selected builtin_fetch_page",
+    "public DNS/address validation and pinned HTTPS fetch succeeded",
+    "read source was persisted and grounded the final answer",
+    "Langfuse contains the real model and builtin_fetch_page tool observations",
+    "Tavily search was not called without a credential"
+  ],
+  "timestamp": "2026-11-06T16:57:40+0800"
+}

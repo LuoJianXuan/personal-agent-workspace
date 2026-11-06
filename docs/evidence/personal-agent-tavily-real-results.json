@@ -1,0 +1,118 @@
+{
+  "status": "passed",
+  "run_id": "e8220856-c631-43b8-8125-41edc0caa790",
+  "trace_url": "http://localhost:3000/project/personal-agent-demo/traces/331ef851d318d686c98ffae55990f520",
+  "query": "IANA example domains purpose",
+  "external_calls": {
+    "fetch": 1,
+    "search": 1
+  },
+  "search_source_count": 3,
+  "read_source_count": 1,
+  "read_urls": [
+    "https://www.iana.org/help/example-domains"
+  ],
+  "artifact": {
+    "id": "9086ad9b-5c57-5c36-9e23-1d31da8b06d3",
+    "name": "IANA 示例域名用途.md",
+    "media_type": "text/markdown"
+  },
+  "model_call_count": 4,
+  "model_calls": [
+    {
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 5452,
+        "total_tokens": 5522,
+        "output_tokens": 70,
+        "input_token_details": {
+          "cache_read": 5248
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    },
+    {
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 7154,
+        "total_tokens": 7205,
+        "output_tokens": 51,
+        "input_token_details": {
+          "cache_read": 5504
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    },
+    {
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 7567,
+        "total_tokens": 7814,
+        "output_tokens": 247,
+        "input_token_details": {
+          "cache_read": 7168
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    },
+    {
+      "status": "SUCCEEDED",
+      "usage": {
+        "input_tokens": 8056,
+        "total_tokens": 8085,
+        "output_tokens": 29,
+        "input_token_details": {
+          "cache_read": 7808
+        },
+        "output_token_details": {}
+      },
+      "error_code": ""
+    }
+  ],
+  "langfuse": {
+    "trace_id": "331ef851d318d686c98ffae55990f520",
+    "count": 29,
+    "types": [
+      "AGENT",
+      "CHAIN",
+      "GENERATION",
+      "TOOL"
+    ],
+    "names": [
+      "ChatCompletionsModel",
+      "HumanInTheLoopMiddleware.after_model",
+      "ModelCallLimitMiddleware.after_model",
+      "ModelCallLimitMiddleware.before_model",
+      "PatchToolCallsMiddleware.before_agent",
+      "TodoListMiddleware.after_model",
+      "ToolCallLimitMiddleware.after_model",
+      "builtin_fetch_page",
+      "builtin_publish_report",
+      "builtin_web_search",
+      "model",
+      "tools"
+    ]
+  },
+  "authorization_window": {
+    "real_model_calls_used": 10,
+    "real_model_calls_authorized": 12,
+    "tavily_search_calls_used": 1,
+    "tavily_search_calls_authorized": 3
+  },
+  "secret_checks": {
+    "runtime_state_contains_tavily_key": false,
+    "langfuse_trace_contains_tavily_key": false,
+    "repository_secret_pattern_scan": "passed"
+  },
+  "checks": [
+    "one real Tavily search returned persisted search-only sources",
+    "a discovered public page was fetched and persisted as a read source",
+    "the Markdown artifact cites only a read source",
+    "Langfuse contains the real model and all three research tool observations",
+    "no tool failed and the Tavily key was never put in model input or artifacts"
+  ],
+  "timestamp": "2026-11-06T17:13:12+0800"
+}

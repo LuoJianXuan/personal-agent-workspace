@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "checks": [
+    "A09/A20: same-key replay, conflicting payload, thread busy and owner isolation",
+    "A07/A18: multiple real-time durable chunks, disconnect, cursor replay, exact final convergence",
+    "Multi-turn completed history, rename and exactly one final projection per run",
+    "A08: Mock model traverses real LangGraph, PostgreSQL checkpoints and real MCP gateway",
+    "A18: mid-stream failure keeps unfinished drafts and has no successful final message",
+    "A27: fifth per-user subscription rejected, management API responsive during four subscriptions",
+    "A10: offline dispatch persists; repeated accepted start returns same run without re-execution",
+    "Restart settles orphaned execution as INTERRUPTED; prior history remains readable",
+    "Admin run lookup is metadata-only; ordinary user is forbidden"
+  ],
+  "real_model_calls": 0,
+  "mode": "mock",
+  "thread_id": "1da87edd-10b1-45fa-8065-5436ef005b10",
+  "tool_run_id": "7732d9f1-54c8-482c-b992-aa0a366cd854",
+  "timestamp": "2026-11-06T15:06:35+0800"
+}

@@ -1,0 +1,10 @@
+{
+  "input": {
+    "zero": -0.0,
+    "title": "演示",
+    "note": null,
+    "amount": 1.0
+  },
+  "canonical_utf8": "{\"amount\":1,\"note\":null,\"title\":\"演示\",\"zero\":0}",
+  "sha256": "7698405cee3ce2e7f5080aace0cf3979e787bfe9d6025d7be96b6a37586ebe16"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "演示订单",
+  "endpoint": "http://demo-mcp:8001/mcp/",
+  "credential_ref": "",
+  "enabled": true,
+  "revision": 0
+}

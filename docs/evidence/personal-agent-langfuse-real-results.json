@@ -1,0 +1,32 @@
+{
+  "checks": [
+    "dedicated Personal Agent Demo project accepts a real local trace",
+    "one stable trace contains Agent/model/tool observations",
+    "trace secret is absent from the exported trace payload",
+    "run details project a browser-safe localhost link"
+  ],
+  "run_id": "724a2d7f-e31f-4f35-81d9-a0988a076bac",
+  "trace_id": "1131067afdf47ec4c90cb4c474df0a5b",
+  "observation_count": 18,
+  "observation_types": [
+    "AGENT",
+    "CHAIN",
+    "GENERATION",
+    "TOOL"
+  ],
+  "observation_names": [
+    "HumanInTheLoopMiddleware.after_model",
+    "MockChatModel",
+    "ModelCallLimitMiddleware.after_model",
+    "ModelCallLimitMiddleware.before_model",
+    "PatchToolCallsMiddleware.before_agent",
+    "TodoListMiddleware.after_model",
+    "ToolCallLimitMiddleware.after_model",
+    "mcp_25eb3046326a41349b0da21ea4651133_af3c8c684565fca7a5710c4c",
+    "model",
+    "personal-agent-run",
+    "tools"
+  ],
+  "real_model_calls": 0,
+  "real_search_calls": 0
+}

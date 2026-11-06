@@ -1,0 +1,11 @@
+ALTER TABLE backend.users ADD COLUMN revision bigint NOT NULL DEFAULT 1;
+CREATE TABLE backend.models (id uuid PRIMARY KEY, data jsonb NOT NULL);
+CREATE UNIQUE INDEX models_one_default ON backend.models ((data->>'is_default')) WHERE (data->>'is_default')='true';
+CREATE TABLE backend.skills (id uuid PRIMARY KEY, data jsonb NOT NULL);
+CREATE TABLE backend.mcp_connections (id uuid PRIMARY KEY, data jsonb NOT NULL);
+CREATE TABLE backend.mcp_tools (id text PRIMARY KEY, connection_id uuid NOT NULL REFERENCES backend.mcp_connections(id), data jsonb NOT NULL);
+CREATE INDEX mcp_tools_connection ON backend.mcp_tools(connection_id);
+CREATE TABLE backend.user_skill_preferences (user_id uuid NOT NULL REFERENCES backend.users(id), skill_id uuid NOT NULL REFERENCES backend.skills(id), enabled boolean NOT NULL, PRIMARY KEY(user_id,skill_id));
+CREATE TABLE backend.capability_snapshots (id uuid PRIMARY KEY, owner_id uuid NOT NULL REFERENCES backend.users(id), data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE backend.admin_audits (id uuid PRIMARY KEY, actor_id uuid NOT NULL REFERENCES backend.users(id), action text NOT NULL, object_id text NOT NULL, request_id uuid NOT NULL, safe_changes jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO backend.schema_migrations(version) VALUES(2);
