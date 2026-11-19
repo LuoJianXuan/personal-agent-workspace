@@ -104,13 +104,18 @@ def main():
     assert conn['probe_status']=='unverified'
     request('/admin/mcp-connections','POST',{'name':'blocked','endpoint':'http://169.254.169.254/','credential_ref':'','enabled':True,'revision':0},a,400)
     conn=request(cp+'/discover','POST',{'revision':conn['revision']},a);assert conn['probe_status']=='success',conn
-    tools=request(cp+'/tools',token=a)['items'];assert len(tools)==1;tool=tools[0];assert tool['remote_name']=='lookup_demo_order' and not tool['enabled'] and tool['trusted_read_only']
+    tools=request(cp+'/tools',token=a)['items'];assert len(tools)==2
+    tool=next(t for t in tools if t['remote_name']=='lookup_demo_order');write_tool=next(t for t in tools if t['remote_name']=='create_demo_note')
+    assert not tool['enabled'] and tool['trusted_read_only'] and tool['access_mode']=='read' and not tool['requires_approval']
+    assert not write_tool['enabled'] and not write_tool['trusted_read_only'] and write_tool['access_mode']=='write' and write_tool['requires_approval']
     assert all(v['namespaced_tool_id']!=tool['namespaced_tool_id'] for v in request('/catalog/tools',token=u)['items'])
     tool=request(cp+'/tools/'+tool['namespaced_tool_id'],'PATCH',{'enabled':True,'revision':tool['revision']},a)
+    write_tool=request(cp+'/tools/'+write_tool['namespaced_tool_id'],'PATCH',{'enabled':True,'revision':write_tool['revision']},a)
     assert any(v['namespaced_tool_id']==tool['namespaced_tool_id'] for v in request('/catalog/tools',token=u)['items'])
+    assert any(v['namespaced_tool_id']==write_tool['namespaced_tool_id'] and v['requires_approval'] for v in request('/catalog/tools',token=u)['items'])
     conn2=request('/admin/mcp-connections','POST',{'name':'Second MCP '+SUFFIX,'endpoint':'http://demo-mcp:8001/mcp/','credential_ref':'','enabled':True,'revision':0},a)
     conn2=request('/admin/mcp-connections/'+conn2['id']+'/discover','POST',{'revision':conn2['revision']},a)
-    t2=request('/admin/mcp-connections/'+conn2['id']+'/tools',token=a)['items'][0];assert t2['namespaced_tool_id']!=tool['namespaced_tool_id']
+    t2=next(t for t in request('/admin/mcp-connections/'+conn2['id']+'/tools',token=a)['items'] if t['remote_name']=='lookup_demo_order');assert t2['namespaced_tool_id']!=tool['namespaced_tool_id']
     request('/admin/mcp-connections/'+conn2['id']+'/tools/'+tool['namespaced_tool_id'],'PATCH',{'enabled':False,'revision':tool['revision']},a,404)
     passed('A05: real SDK initialize/list_tools, default-denied tools, explicit enablement, namespace isolation')
     snap=snapshot(m,u,skill_ids=[sk['id']]);assert tool['namespaced_tool_id'] in snap['tool_ids'];assert 'credential_ref' not in json.dumps(snap)
@@ -125,15 +130,19 @@ def main():
     tool=request(cp+'/tools/'+tool['namespaced_tool_id'],'PATCH',{'enabled':True,'revision':tool['revision']},a)
     # Simulate a previously stored old schema; reconcile against the real current provider discovery.
     sql("UPDATE backend.mcp_tools SET data=jsonb_set(data,'{schema_hash}','\"previous-schema\"') WHERE id='"+tool['namespaced_tool_id']+"';")
-    conn=request(cp+'/discover','POST',{'revision':conn['revision']},a);tool=request(cp+'/tools',token=a)['items'][0];assert not tool['enabled'] and tool['revision']>2
+    conn=request(cp+'/discover','POST',{'revision':conn['revision']},a);tool=next(t for t in request(cp+'/tools',token=a)['items'] if t['remote_name']=='lookup_demo_order');assert not tool['enabled'] and tool['revision']>2
     tool=request(cp+'/tools/'+tool['namespaced_tool_id'],'PATCH',{'enabled':True,'revision':tool['revision']},a)
     snap=snapshot(m,u,skill_ids=[]);conn=request(cp,'PATCH',write('McpWrite',conn,enabled=False),a);assert not validate_snapshot(snap,ua)[1]['allow']
-    assert not request(cp+'/tools',token=a)['items'][0]['enabled']
+    assert not any(t['enabled'] for t in request(cp+'/tools',token=a)['items'])
     passed('A06: skill/tool/MCP revocation invalidates snapshots; changed discovery schema requires reauthorization')
     conn=request(cp,'PATCH',write('McpWrite',conn,enabled=True),a);conn=request(cp+'/discover','POST',{'revision':conn['revision']},a)
     run('stop','demo-mcp')
     try:
-        start=time.monotonic();failed=request(cp+'/discover','POST',{'revision':conn['revision']},a);assert failed['probe_status']=='failed' and time.monotonic()-start<12
+        start=time.monotonic();failed=request(cp+'/discover','POST',{'revision':conn['revision']},a)
+        elapsed=time.monotonic()-start
+        assert failed['probe_status']=='failed', failed['probe_status']
+        # Backend bounds discovery at 15s (Runtime worker: 12s); allow 2s for HTTP/DB overhead.
+        assert elapsed<17, f'MCP unavailable discovery exceeded outer deadline: {elapsed:.2f}s'
     finally:run('up','-d','--wait','demo-mcp')
     conn=request(cp+'/discover','POST',{'revision':failed['revision']},a);assert conn['probe_status']=='success'
     passed('MCP unavailable yields persisted visible failure and recovers after provider restart')
@@ -182,7 +191,7 @@ asyncio.run(main())
     passed('User creation is ordinary-only; duplicate handling, disable revokes token/snapshot, administrator protected')
     audits=request('/admin/audits',token=a)['items'];assert any(v['object_id']==m['id'] for v in audits)
     serialized=json.dumps(audits);assert password not in serialized and 'acceptance-placeholder' not in serialized and '第二版正文' not in serialized
-    versions=sql("SELECT string_agg(version::text,',' ORDER BY version) FROM backend.schema_migrations;");assert versions=='1,2,3,4,5,6'
+    versions=sql("SELECT string_agg(version::text,',' ORDER BY version) FROM backend.schema_migrations;");assert versions=='1,2,3,4,5,6,7,8,9,10'
     run('run','--rm','--no-deps','backend','migrate');assert sql("SELECT string_agg(version::text,',' ORDER BY version) FROM backend.schema_migrations;")==versions
     run('restart','backend','runtime');run('up','-d','--wait','backend','runtime')
     assert any(v['id']==m['id'] for v in request('/admin/models',token=a)['items'])

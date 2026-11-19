@@ -36,9 +36,11 @@ import {
 } from "antd";
 import type { Thread } from "./contracts/models";
 import { ApiError, api, login, me, setToken } from "./api";
-import { Models, Skills, Mcp, Users, Audits, AdminHome } from "./control";
+import { Models, Skills, Mcp, Users, Audits, AdminHome, CapabilityCatalog } from "./control";
 import { ConversationSidebar, Icon } from "./workspace-ui";
+import { ToolCenter } from "./tool-center";
 import "./style.css";
+import "./tool-center.css";
 const client = new QueryClient({
   defaultOptions: {
     queries: { retry: false, staleTime: 0, refetchOnWindowFocus: true },
@@ -163,7 +165,8 @@ const workspaceMenu = [
   { key: "/app/chat", icon: <Icon name="chat" />, label: "对话" },
   { key: "/app/library", icon: <Icon name="library" />, label: "资料库" },
   { key: "/app/scenes/data-analysis", icon: <Icon name="chart" />, label: "数据分析" },
-  { key: "/app/skills", icon: <Icon name="skill" />, label: "平台技能" },
+  { key: "/app/tools", icon: <Icon name="grid" />, label: "工具" },
+  { key: "/app/settings", icon: <Icon name="settings" />, label: "设置" },
   { key: "/app/profile", icon: <Icon name="user" />, label: "个人信息" },
 ];
 function Shell({ admin = false }: { admin?: boolean }) {
@@ -319,7 +322,10 @@ function App() {
           <Route path="chat" element={<Chat />} />
           <Route path="library" element={<Library />} />
           <Route path="scenes/data-analysis" element={<DataAnalysis />} />
-          <Route path="skills" element={<Skills personal />} />
+          <Route path="tools" element={<ToolCenter />} />
+          <Route path="skills" element={<Navigate to="/app/tools?tab=skills" replace />} />
+          <Route path="capabilities" element={<Navigate to="/app/tools?tab=mcp" replace />} />
+          <Route path="settings" element={<CapabilityCatalog />} />
           <Route path="profile" element={<Profile />} />
         </Route>
       </Route>

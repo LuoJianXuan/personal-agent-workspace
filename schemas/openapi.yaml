@@ -16,6 +16,18 @@
     }
   ],
   "paths": {
+    "/api/admin/connector-definitions": {"get":{"operationId":"admin_connector_definitions","responses":{"200":{"description":"Published connector settings","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/ConnectorSettingsList"}}}}}}},
+    "/api/admin/connector-definitions/{connector}": {"parameters":[{"name":"connector","in":"path","required":true,"schema":{"type":"string"}}],"patch":{"operationId":"admin_update_connector_definition","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/ConnectorSettingsWrite"}}}},"responses":{"200":{"description":"Updated connector settings","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/ConnectorSettings"}}}},"409":{"description":"Connector revision conflict"}}}},
+    "/api/catalog/connectors": {"get":{"operationId":"catalog_connectors","responses":{"200":{"description":"Personal connector catalog with safe presentation metadata; contains no credentials","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalConnectionList"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/api/catalog/mcp-services": {"get":{"operationId":"catalog_platform_mcp_services","responses":{"200":{"description":"Enabled platform MCP services and admitted tool summaries; configured does not assert live remote health","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PlatformMcpServiceList"}}}}}}},
+    "/api/me/connections": {"get":{"operationId":"personal_connections","responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalConnectionList"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/api/me/connections/{connector}": {"parameters":[{"name":"connector","in":"path","required":true,"schema":{"type":"string"}}],"get":{"operationId":"personal_connection","responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalConnection"}}}},"409":{"description":"Connection state or version conflict"}}},"delete":{"operationId":"disconnect_personal_connection","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/RevisionWrite"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalConnection"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/api/me/connections/{connector}/probe": {"parameters":[{"name":"connector","in":"path","required":true,"schema":{"type":"string"}}],"post":{"operationId":"probe_personal_connection","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalProbeWrite"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalConnection"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/api/me/connections/{connector}/grant": {"parameters":[{"name":"connector","in":"path","required":true,"schema":{"type":"string"}}],"put":{"operationId":"grant_personal_connection","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalGrantWrite"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalConnection"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/api/me/connections/{connector}/discard": {"parameters":[{"name":"connector","in":"path","required":true,"schema":{"type":"string"}}],"post":{"operationId":"discard_personal_probe","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/RevisionWrite"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalConnection"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/internal/mcp/personal-discover": {"post":{"operationId":"internal_personal_discover","security":[{"ServiceBearer":[]}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalDiscovery"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/DiscoverResult"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/internal/personal-mcp/discovery-material": {"post":{"operationId":"internal_personal_discovery_material","security":[{"ServiceBearer":[]}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalDiscovery"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalSecretMaterial"}}}},"409":{"description":"Connection state or version conflict"}}}},
+    "/internal/personal-mcp/execution-material": {"post":{"operationId":"internal_personal_execution_material","security":[{"ServiceBearer":[]}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalExecutionMaterial"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"./jsonschema/contracts.json#/$defs/PersonalSecretMaterial"}}}},"409":{"description":"Connection state or version conflict"}}}},
     "/api/auth/login": {
       "post": {
         "summary": "Login",
@@ -987,15 +999,6 @@
           "200": {
             "description": "Success"
           },
-          "202": {
-            "description": "Submission durably accepted"
-          },
-          "409": {
-            "description": "Conflict"
-          },
-          "429": {
-            "description": "Resource exhausted"
-          },
           "201": {
             "description": "Success",
             "content": {
@@ -1005,6 +1008,15 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Submission durably accepted"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "429": {
+            "description": "Resource exhausted"
           }
         },
         "requestBody": {
@@ -1295,19 +1307,6 @@
               }
             }
           },
-          "409": {
-            "description": "Model/capability unavailable, thread busy, or conflicting idempotent request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Resource exhausted"
-          },
           "400": {
             "description": "Invalid submission or more than three default skills; explicit selection is required",
             "content": {
@@ -1327,6 +1326,19 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Model/capability unavailable, thread busy, or conflicting idempotent request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Resource exhausted"
           }
         },
         "parameters": [
@@ -2432,6 +2444,9 @@
           "200": {
             "description": "Success"
           },
+          "302": {
+            "description": "Short-lived private object download"
+          },
           "default": {
             "description": "Structured failure",
             "content": {
@@ -2928,12 +2943,28 @@
         "responses": {
           "200": {
             "description": "Parsed result",
-            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedDocument"
+                }
+              }
+            }
           },
-          "default": {"description": "Explicit error"}
+          "default": {
+            "description": "Explicit error"
+          }
         },
         "parameters": [
-          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
         ]
       }
     },
@@ -2943,12 +2974,35 @@
         "operationId": "post__internal_documents_extract",
         "x-implementation": "S16-S20",
         "responses": {
-          "200": {"description": "Parsed result", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}},
-          "default": {"description": "Explicit error"}
+          "200": {
+            "description": "Parsed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedDocument"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
         },
-        "security": [{"ServiceBearer": []}],
+        "security": [
+          {
+            "ServiceBearer": []
+          }
+        ],
         "parameters": [
-          {"name": "X-Document-Metadata", "in": "header", "required": true, "schema": {"type": "string"}, "description": "JSON DocumentExtractMetadata; body is bounded original bytes"}
+          {
+            "name": "X-Document-Metadata",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "JSON DocumentExtractMetadata; body is bounded original bytes"
+          }
         ]
       }
     },
@@ -3091,15 +3145,55 @@
         "operationId": "put__internal_files_id_parsed",
         "x-implementation": "S16-S20",
         "responses": {
-          "200": {"description": "Committed cache", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}},
-          "default": {"description": "Explicit error"}
+          "200": {
+            "description": "Committed cache",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedDocument"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
         },
-        "security": [{"ServiceBearer": []}],
-        "parameters": [
-          {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}},
-          {"name": "run_id", "in": "query", "required": true, "schema": {"type": "string", "format": "uuid"}}
+        "security": [
+          {
+            "ServiceBearer": []
+          }
         ],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ParsedDocument"}}}}
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParsedDocument"
+              }
+            }
+          }
+        }
       }
     },
     "/internal/artifacts/blob": {
@@ -3204,6 +3298,80 @@
             "ServiceBearer": []
           }
         ]
+      }
+    },
+    "/api/files/{id}/download-location": {
+      "get": {
+        "summary": "Authorize private download; never persist signed URL",
+        "operationId": "get_file_download_location",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadLocation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        }
+      }
+    },
+    "/api/artifacts/{id}/revisions": {
+      "get": {
+        "summary": "Read owned immutable revision lineage",
+        "operationId": "get_artifact_revisions",
+        "security": [
+          {
+            "UserBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactRevisionList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Explicit error"
+          }
+        }
       }
     }
   },
@@ -3506,6 +3674,21 @@
       },
       "BinaryArtifactMetadata": {
         "$ref": "./jsonschema/contracts.json#/$defs/BinaryArtifactMetadata"
+      },
+      "Artifact": {
+        "$ref": "./jsonschema/contracts.json#/$defs/Artifact"
+      },
+      "ArtifactRevision": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ArtifactRevision"
+      },
+      "ArtifactRevisionList": {
+        "$ref": "./jsonschema/contracts.json#/$defs/ArtifactRevisionList"
+      },
+      "DownloadLocation": {
+        "$ref": "./jsonschema/contracts.json#/$defs/DownloadLocation"
+      },
+      "CandidateArtifact": {
+        "$ref": "./jsonschema/contracts.json#/$defs/CandidateArtifact"
       }
     }
   }

@@ -1,4 +1,4 @@
-import type { User, Token } from "./contracts/models";
+import type { User, Token, DownloadLocation } from "./contracts/models";
 import { validate } from "./contracts/validate";
 let token = sessionStorage.getItem("workspace.token");
 export function setToken(value: string | null) {
@@ -21,7 +21,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (token) headers.set("Authorization", `Bearer ${token}`);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const timer = setTimeout(() => controller.abort(), path.startsWith("/me/connections/") && path.endsWith("/probe") ? 18000 : 15000);
   try {
     const response = await fetch("/api" + path, {
       ...init,
@@ -47,6 +47,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       );
     });
     if (!response.ok) {
+      const storageMessages: Record<string,string> = {
+        STORAGE_UNAVAILABLE: '文件存储暂不可用，请稍后重试',
+        FILE_STORAGE_UNAVAILABLE: '文件存储暂不可用，请稍后重试',
+        FILE_MISSING: '文件内容缺失，请联系管理员检查存储',
+        FILE_INTEGRITY_ERROR: '文件完整性校验失败，已停止提供下载',
+        ARTIFACT_NOT_READY: '产物尚未发布完成，请稍后重试',
+        ARTIFACT_REVISION_CONFLICT: '产物已有更新版本，请刷新后选择版本继续',
+      };
       if (response.status === 401 && path != "/auth/login") {
         setToken(null);
         window.dispatchEvent(new Event("workspace:unauthorized"));
@@ -54,7 +62,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       throw new ApiError(
         response.status,
         data.code || "REQUEST_FAILED",
-        data.message || "请求失败",
+        storageMessages[data.code] || data.message || "请求失败",
         data.request_id || "",
       );
     }
@@ -88,6 +96,15 @@ export function authHeaders() {
 }
 
 export async function downloadFile(id: string, name: string) {
+  const location = validate<DownloadLocation>("DownloadLocation", await api(`/files/${id}/download-location`));
+  if (location.mode === 'presigned') {
+    const target = new URL(location.url);
+    if (!['http:', 'https:'].includes(target.protocol)) throw Error('下载地址无效');
+    const a = document.createElement('a');
+    a.href = target.href; a.download = name; a.rel = 'noreferrer'; a.referrerPolicy = 'no-referrer';
+    document.body.appendChild(a); a.click(); a.remove();
+    return;
+  }
   const response = await fetch(`/api/files/${id}/download`, { headers: authHeaders() });
   if (!response.ok) throw Error(`下载失败（${response.status}）`);
   const url = URL.createObjectURL(await response.blob());

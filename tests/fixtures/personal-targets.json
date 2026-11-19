@@ -1,0 +1,28 @@
+{
+  "models": [
+    {"endpoint": "https://api.deepseek.com", "credential_ref": "deepseek_primary", "env_var": "DEEPSEEK_API_KEY"},
+    {"endpoint": "https://api.deepseek.com/v1", "credential_ref": "deepseek_primary", "env_var": "DEEPSEEK_API_KEY"}
+  ],
+  "mcp": [
+    {
+      "endpoint": "http://demo-mcp:8001/mcp/",
+      "credential_ref": "",
+      "env_var": "",
+      "max_calls_per_minute": 60,
+      "read_only_tools": ["lookup_demo_order"],
+      "approval_required_tools": ["create_demo_note"]
+    },
+    {
+      "endpoint": "http://personal-mcp-fixture:8004/mcp/",
+      "credential_ref": "test_account_token",
+      "env_var": "",
+      "personal_connector": "fixture-personal",
+      "connector_name": "个人连接验收夹具",
+      "test_only": true,
+      "max_calls_per_minute": 30,
+      "read_only_tools": ["fixture_account"],
+      "approval_required_tools": ["fixture_write"],
+      "blocked_tools": ["fixture_blocked"]
+    }
+  ]
+}

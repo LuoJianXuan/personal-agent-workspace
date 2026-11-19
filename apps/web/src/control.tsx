@@ -1,4 +1,5 @@
 import { Icon } from "./workspace-ui";
+import { usePersonalConnections } from "./connection-manager";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,6 +30,7 @@ import type {
   User,
   Audit,
   CapabilityPreview,
+  ConnectorSettings,
 } from "./contracts/models";
 import { api, ApiError } from "./api";
 import { validate } from "./contracts/validate";
@@ -44,6 +46,10 @@ const labels: Record<string, string> = {
   unverified: "未验证",
   success: "发现成功",
   failed: "发现失败",
+};
+const probeGuidance: Record<string, string> = {
+  MCP_UNAVAILABLE:
+    "无法完成初始化或工具发现。请检查远端服务、部署凭据和网络后重新发现；已有工具不会被静默调用。",
 };
 export function Failure({ error }: { error: unknown }) {
   return (
@@ -415,6 +421,7 @@ export function Models() {
 }
 
 export function Skills({ personal = false }: { personal?: boolean }) {
+  const connections = usePersonalConnections();
   const q = useList<SkillConfig>(
     personal ? "catalog-skills" : "skills",
     personal ? "/catalog/skills" : "/admin/skills",
@@ -595,6 +602,25 @@ export function Skills({ personal = false }: { personal?: boolean }) {
           <Form.Item name="content" label="Markdown 正文" rules={required}>
             <Input.TextArea rows={9} maxLength={30000} />
           </Form.Item>
+          <Form.List name="dependencies">
+            {(fields, { add, remove }) => <>
+              {fields.map((field) => <Space key={field.key} wrap align="start">
+                <Form.Item name={[field.name, "kind"]} label="依赖类型" rules={required}>
+                  <Select style={{ minWidth: 125 }} options={[{value: "builtin", label: "平台工具"}, {value: "connector", label: "个人连接"}]} />
+                </Form.Item>
+                <Form.Item noStyle shouldUpdate>
+                  {({ getFieldValue }) => <Form.Item name={[field.name, "capability_id"]} label="依赖能力" rules={required}>
+                    <Select style={{ minWidth: 150 }} options={getFieldValue(["dependencies", field.name, "kind"]) === "connector"
+                      ? (connections.data?.items ?? []).map((item) => ({value: item.connector_id, label: item.name}))
+                      : [{value: "builtin_web_search", label: "网页搜索"}, {value: "builtin_fetch_page", label: "网页读取"}, {value: "builtin_read_material", label: "资料读取"}, {value: "builtin_python", label: "隔离计算"}]} />
+                  </Form.Item>}
+                </Form.Item>
+                <Form.Item name={[field.name, "required"]} label="必需" valuePropName="checked"><Switch /></Form.Item>
+                <Button type="text" onClick={() => remove(field.name)}>移除</Button>
+              </Space>)}
+              <Form.Item><Button onClick={() => add({kind: "builtin", required: true})} disabled={fields.length >= 12}>添加能力依赖</Button></Form.Item>
+            </>}
+          </Form.List>
           <Form.Item name="enabled" label="平台启用" valuePropName="checked">
             <Switch />
           </Form.Item>
@@ -606,6 +632,7 @@ export function Skills({ personal = false }: { personal?: boolean }) {
 
 export function Mcp() {
   const q = useList<McpConfig>("mcp", "/admin/mcp-connections", "McpConfig");
+  const connectors = useList<ConnectorSettings>("admin-connectors", "/admin/connector-definitions", "ConnectorSettings");
   const dep = useQuery({
     queryKey: ["deployment"],
     queryFn: async () =>
@@ -615,6 +642,13 @@ export function Mcp() {
       ),
   });
   const action = useAction();
+  const [connectorEdit, setConnectorEdit] = useState<ConnectorSettings>();
+  const [connectorForm] = Form.useForm();
+  function editConnector(row: ConnectorSettings) {
+    action.clear();
+    setConnectorEdit(row);
+    connectorForm.setFieldsValue({ name: row.name, presentation: row.presentation ?? { description: "", category: "", icon: "plug", token_help_url: "" } });
+  }
   const [edit, setEdit] = useState<McpConfig | null | undefined>();
   const [tools, setTools] = useState<McpConfig>();
   const [form] = Form.useForm();
@@ -638,8 +672,38 @@ export function Mcp() {
         "MCP 连接",
         "发现工具与授权使用分开管理。此处只执行协议初始化与工具发现。",
       )}
+      <Card title="个人 MCP 目录" extra={<span className="muted">用户在工具栏目安装并授权自己的账户</span>}>
+        {connectors.error && <Failure error={connectors.error} />}
+        <Table rowKey="connector_id" size="small" pagination={false} loading={connectors.isPending}
+          dataSource={connectors.data?.items} columns={[
+            { title: "连接器", dataIndex: "name" },
+            { title: "分类", render: (_, row) => row.presentation?.category || "外部服务" },
+            { title: "服务地址", dataIndex: "endpoint", responsive: ["sm"] },
+            { title: "发布", render: (_, row) => <Switch checked={row.enabled} disabled={action.busy}
+              aria-label={`发布 ${row.name}`} onChange={(enabled) => void action.run(() =>
+                save(`/admin/connector-definitions/${encodeURIComponent(row.connector_id)}`, "PATCH",
+                  {name: row.name, enabled, revision: row.revision}))} /> },
+            { title: "展示信息", render: (_, row) => <Button size="small" disabled={action.busy} onClick={() => editConnector(row)}>编辑</Button> },
+          ]} />
+      </Card>
+      <Modal title="编辑 MCP 目录信息" open={!!connectorEdit} onCancel={() => { if (!action.busy) setConnectorEdit(undefined); }} footer={null} closable={!action.busy} maskClosable={!action.busy}>
+        <p className="muted">服务地址与安全策略仍由部署配置控制。这里仅维护用户看到的目录信息。</p>
+        {action.error !== undefined && <Failure error={action.error} />}
+        <Form form={connectorForm} layout="vertical" onFinish={async values => {
+          if (connectorEdit && await action.run(() => save(`/admin/connector-definitions/${encodeURIComponent(connectorEdit.connector_id)}`, "PATCH", {
+            ...values, enabled: connectorEdit.enabled, revision: connectorEdit.revision,
+          }))) setConnectorEdit(undefined);
+        }}>
+          <Form.Item name="name" label="名称" rules={[{ required: true, whitespace: true, message: "请输入名称" }]}><Input maxLength={100} /></Form.Item>
+          <Form.Item name={["presentation", "description"]} label="简介"><Input.TextArea maxLength={500} rows={3} /></Form.Item>
+          <Form.Item name={["presentation", "category"]} label="分类"><Input maxLength={40} /></Form.Item>
+          <Form.Item name={["presentation", "icon"]} label="图标" rules={[{ required: true }]}><Select options={[{value:"plug",label:"连接器"},{value:"mcd",label:"麦当劳"},{value:"search",label:"搜索"},{value:"library",label:"资料"},{value:"map",label:"地图"}]} /></Form.Item>
+          <Form.Item name={["presentation", "token_help_url"]} label="Token 获取链接（HTTPS，可留空）" rules={[{ pattern: /^(https:\/\/[^\s]+)?$/, message: "请填写 HTTPS 链接" }]}><Input maxLength={500} /></Form.Item>
+          <Space><Button disabled={action.busy} onClick={() => setConnectorEdit(undefined)}>取消</Button><Button type="primary" htmlType="submit" loading={action.busy}>保存展示信息</Button></Space>
+        </Form>
+      </Modal>
       <Card
-        title="连接配置"
+        title="平台连接"
         extra={
           <Space>
             <Button onClick={() => q.refetch()}>刷新</Button>
@@ -687,7 +751,12 @@ export function Mcp() {
                       ? new Date(r.last_probe_at).toLocaleString()
                       : "尚未探测"}
                   </div>
-                  {r.probe_error && <span>连接失败或超时，请检查部署</span>}
+                  {r.probe_error && (
+                    <div className="mcp-probe-guidance">
+                      {probeGuidance[r.probe_error] ??
+                        "连接未通过探测，请检查部署配置后重新发现。"}
+                    </div>
+                  )}
                 </>
               ),
             },
@@ -823,7 +892,7 @@ function ToolList({ connection }: { connection: McpConfig }) {
       {action.error !== undefined && <Failure error={action.error} />}
       <Alert
         type="info"
-        message="发现的工具默认禁用。只有部署清单确认的只读工具可以启用。"
+        message="发现的工具默认禁用。只读工具可直接授权；写工具启用后仍会在每次执行前请求用户批准。"
       />
       <Table
         rowKey="namespaced_tool_id"
@@ -845,10 +914,14 @@ function ToolList({ connection }: { connection: McpConfig }) {
           {
             title: "部署准入",
             render: (_, r) => (
-              <Tag color={r.trusted_read_only ? "green" : "red"}>
-                {r.trusted_read_only ? "只读许可" : "未许可"}
+              <Tag color={r.access_mode === "read" ? "green" : r.access_mode === "write" ? "orange" : "red"}>
+                {r.access_mode === "read" ? "只读许可" : r.access_mode === "write" ? "写入 · 每次审批" : "未许可"}
               </Tag>
             ),
+          },
+          {
+            title: "服务声明",
+            render: (_, r) => r.server_hint_present ? <Tag>{r.server_read_only_hint ? "声明只读" : "声明可能写入"}</Tag> : <span className="muted">未声明</span>,
           },
           {
             title: "发现状态",
@@ -862,7 +935,7 @@ function ToolList({ connection }: { connection: McpConfig }) {
                 checked={r.enabled}
                 disabled={
                   action.busy ||
-                  (!r.enabled && (!r.available || !r.trusted_read_only))
+                  (!r.enabled && (!r.available || r.access_mode === "blocked"))
                 }
                 onChange={(enabled) =>
                   action.run(() =>
@@ -1056,6 +1129,15 @@ export function CapabilityCatalog() {
     "/catalog/tools",
     "McpToolConfig",
   );
+  const network = useQuery({
+    queryKey: ["catalog-network"],
+    queryFn: () =>
+      api<{
+        fetch_available: boolean;
+        search_available: boolean;
+        compute_available: boolean;
+      }>("/capabilities/network"),
+  });
   const action = useAction();
   const [model, setModel] = useState<string>();
   const [selected, setSelected] = useState<string[] | undefined>();
@@ -1064,11 +1146,12 @@ export function CapabilityCatalog() {
     <>
       <div className="page-heading">
         <span className="eyebrow">YOUR WORKSPACE</span>
-        <h1>工作台</h1>
-        <p>查看管理员开放的模型、技能与只读工具。</p>
+        <h1>设置</h1>
+        <p>查看模型与运行环境状态；MCP 安装和技能启用请前往工具栏目。</p>
       </div>
+      <Space style={{ marginBottom: 24 }}><Button href="/app/tools?tab=mcp">管理 MCP</Button><Button href="/app/tools?tab=skills">管理技能</Button></Space>
       <div className="workspace-grid">
-        <Card title="本轮能力选择">
+        <details className="settings-diagnostic"><summary>高级诊断 · 检查模型与能力组合</summary><Card title="能力组合检查">
           <Space direction="vertical" style={{ width: "100%" }}>
             {models.error && <Failure error={models.error} />}
             <Select
@@ -1119,7 +1202,7 @@ export function CapabilityCatalog() {
                 })
               }
             >
-              检查本轮配置
+              检查配置（不影响对话选择）
             </Button>
             {action.error !== undefined && <Failure error={action.error} />}{" "}
             {preview && (
@@ -1131,27 +1214,74 @@ export function CapabilityCatalog() {
             )}
             <Alert
               type="info"
-              message="对话发送将在 Day 3 接入"
-              description="当前配置检查不会调用模型，也不会执行业务工具。"
+              message="配置检查不会产生外部调用"
+              description="这里只冻结并校验能力快照；模型与工具仅在你发送对话后运行。"
             />
           </Space>
-        </Card>
-        <Card title="已授权只读工具">
+        </Card></details>
+        <details className="settings-diagnostic"><summary>高级诊断 · 已授权工具明细</summary><Card title="已授权工具">
           {tools.error ? (
             <Failure error={tools.error} />
           ) : tools.data?.items.length ? (
             <Space direction="vertical">
               {tools.data.items.map((t) => (
                 <div key={t.namespaced_tool_id}>
-                  <Tag color="cyan">{t.remote_name}</Tag>
+                  <Tag color={t.requires_approval ? "orange" : "cyan"}>{t.remote_name}</Tag>
+                  <Tag>{t.requires_approval ? "执行前审批" : "只读"}</Tag>
                   <p>{t.description}</p>
                 </div>
               ))}
             </Space>
           ) : (
-            <Empty description="暂无已授权工具" />
+            <Empty description="暂无已授权工具。个人 MCP 请到工具栏目安装；平台 MCP 由管理员配置。" />
           )}
-          <Button href="/app/skills">管理个人技能</Button>
+          <Button href="/app/tools">打开工具栏目</Button>
+        </Card></details>
+        <Card title="运行环境状态">
+          {network.error ? (
+            <Failure error={network.error} />
+          ) : (
+            <Space direction="vertical" style={{ width: "100%" }}>
+              <div>
+                <Tag color={network.data?.fetch_available ? "green" : "default"}>
+                  网页读取
+                </Tag>
+                <span>
+                  {network.data?.fetch_available
+                    ? "发送时开启联网即可使用"
+                    : "部署未启用公开网页访问"}
+                </span>
+              </div>
+              <div>
+                <Tag color={network.data?.search_available ? "green" : "default"}>
+                  网页搜索
+                </Tag>
+                <span>
+                  {network.data?.search_available
+                    ? "搜索凭据与额度可用"
+                    : "尚未配置搜索凭据或额度"}
+                </span>
+              </div>
+              <div>
+                <Tag color={network.data?.compute_available ? "green" : "default"}>
+                  隔离计算
+                </Tag>
+                <span>
+                  {network.data?.compute_available
+                    ? "Python 任务会在隔离环境执行"
+                    : "计算代理尚未配置，不会回退到 Runtime 或宿主机执行"}
+                </span>
+              </div>
+              {models.data?.items.some((item) => !item.available) && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="部分模型当前不可用"
+                  description="请在上方模型列表查看状态；缺少凭据、目标未获准入或运行服务不可用时不会静默降级。"
+                />
+              )}
+            </Space>
+          )}
         </Card>
       </div>
     </>

@@ -1,5 +1,5 @@
 """Trusted wrapper inside a fresh, credential-free, offline job container."""
-import base64,io,json,os,subprocess,sys,time
+import base64,hashlib,io,json,os,subprocess,sys,time
 from pathlib import Path
 
 root=Path('/work');job=root/'job.json'
@@ -24,7 +24,8 @@ try:
         if f.is_symlink() or not f.is_file() or f.suffix.lower() not in types or len(f.name)>120 or f.stat().st_nlink!=1:raise ValueError('COMPUTE_OUTPUT_INVALID')
         size=f.stat().st_size;total+=size
         if size>5*1024*1024 or total>10*1024*1024:raise ValueError('COMPUTE_OUTPUT_LIMIT')
-        result['files'].append({'name':f.name,'media_type':types[f.suffix.lower()],'content':base64.b64encode(f.read_bytes()).decode()})
+        raw=f.read_bytes()
+        result['files'].append({'name':f.name,'media_type':types[f.suffix.lower()],'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'content':base64.b64encode(raw).decode()})
     result['error']=''
 except subprocess.TimeoutExpired:result['error']='COMPUTE_TIMEOUT'
 except Exception as e:result['error']=str(e) if str(e).startswith('COMPUTE_') else 'COMPUTE_FAILED';result['files']=[]

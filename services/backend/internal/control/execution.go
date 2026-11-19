@@ -35,8 +35,17 @@ func (s *Service) checkSnapshot(tx *gorm.DB, snap contracts.Snapshot) string {
 			return "CAPABILITY_CHANGED"
 		}
 	}
+	personal := map[string]map[string]personalTool{}
 	for _, v := range snap.McpConnections {
-		if !check("mcp_connections", v.Id, v.Revision) || !allowed("mcp", v.Endpoint, v.CredentialRef) {
+		if v.ConnectorId != nil {
+			_, items, ok := checkPersonalSnapshot(tx, snap.Context.UserId, v)
+			if !ok {
+				return "CAPABILITY_CHANGED"
+			}
+			personal[v.Id] = items
+			continue
+		}
+		if !check("mcp_connections", v.Id, v.Revision) || !allowed("mcp", v.Endpoint, v.CredentialRef) || mcpLimit(v.Endpoint, v.CredentialRef) != v.MaxCallsPerMinute {
 			return "CAPABILITY_CHANGED"
 		}
 		conn, e := get(tx, "mcp_connections", v.Id)
@@ -45,6 +54,12 @@ func (s *Service) checkSnapshot(tx *gorm.DB, snap contracts.Snapshot) string {
 		}
 	}
 	for _, v := range snap.Tools {
+		if items, ok := personal[v.ConnectionId]; ok {
+			if !matchesPersonalTool(v, items) {
+				return "CAPABILITY_CHANGED"
+			}
+			continue
+		}
 		if !check("mcp_tools", v.NamespacedToolId, v.Revision) {
 			return "CAPABILITY_CHANGED"
 		}
@@ -53,7 +68,8 @@ func (s *Service) checkSnapshot(tx *gorm.DB, snap contracts.Snapshot) string {
 			return "CAPABILITY_CHANGED"
 		}
 		conn, e := get(tx, "mcp_connections", v.ConnectionId)
-		if e != nil || !flag(tool, "available") || str(tool, "schema_hash") != v.SchemaHash || !trusted(str(conn, "endpoint"), str(conn, "credential_ref"), v.RemoteName) {
+		mode, requiresApproval, _, admitted := toolPolicy(str(conn, "endpoint"), str(conn, "credential_ref"), v.RemoteName)
+		if e != nil || !flag(tool, "available") || str(tool, "schema_hash") != v.SchemaHash || !admitted || mode != v.AccessMode || requiresApproval != v.RequiresApproval {
 			return "CAPABILITY_CHANGED"
 		}
 	}

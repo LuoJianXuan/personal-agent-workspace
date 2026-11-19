@@ -44,13 +44,104 @@ class Model(TypedDict):
     capabilities: ModelCapabilities
     revision: int
 
+class SkillDependency(TypedDict):
+    kind: Literal["builtin", "connector"]
+    capability_id: str
+    required: bool
+
+class PersonalProbeWrite(TypedDict):
+    revision: int
+    token: NotRequired[str]
+
+class PersonalGrantWrite(TypedDict):
+    revision: int
+    catalog_hash: str
+    mode: Literal["query", "full"]
+
+class PersonalToolPreview(TypedDict):
+    reason: NotRequired[Literal["UNSUPPORTED_SCHEMA", "PLATFORM_BLOCKED"]]
+    name: str
+    policy: Literal["read", "confirm", "unknown", "blocked"]
+    granted: bool
+
+class ConnectorPresentation(TypedDict):
+    description: str
+    category: str
+    icon: Literal["plug", "mcd", "search", "library", "map"]
+    token_help_url: str
+
+class PlatformMcpTool(TypedDict):
+    name: str
+    description: str
+    requires_approval: bool
+
+class PlatformMcpService(TypedDict):
+    id: str
+    name: str
+    availability: Literal["configured", "unavailable"]
+    reason: str
+    tools: list[PlatformMcpTool]
+
+class PlatformMcpServiceList(TypedDict):
+    items: list[PlatformMcpService]
+
+class PersonalConnection(TypedDict):
+    connector_id: str
+    presentation: NotRequired[ConnectorPresentation]
+    name: str
+    connection_id: NotRequired[str]
+    revision: int
+    status: Literal["unconfigured", "disconnected", "pending", "ready", "auth_required"]
+    catalog_hash: str
+    pending: bool
+    tools: list[PersonalToolPreview]
+
+class PersonalConnectionList(TypedDict):
+    items: list[PersonalConnection]
+
+class ConnectorSettingsWrite(TypedDict):
+    presentation: NotRequired[ConnectorPresentation]
+    name: str
+    enabled: bool
+    revision: int
+
+class ConnectorSettings(TypedDict):
+    presentation: NotRequired[ConnectorPresentation]
+    connector_id: str
+    endpoint: str
+    name: str
+    enabled: bool
+    revision: int
+
+class ConnectorSettingsList(TypedDict):
+    items: list[ConnectorSettings]
+
+class PersonalDiscovery(TypedDict):
+    operation_id: str
+
+class PersonalExecutionMaterial(TypedDict):
+    run_id: str
+    execution_id: str
+    tool_id: str
+    args_hash: str
+    decision_id: NotRequired[str]
+    auth_failed: NotRequired[bool]
+
+class PersonalSecretMaterial(TypedDict):
+    endpoint: str
+    credential_ref: str
+    token: str
+
 class Skill(TypedDict):
     id: str
     name: str
     content: str
+    missing_optional_dependencies: NotRequired[list[SkillDependency]]
     revision: int
 
 class Tool(TypedDict):
+    fingerprint: NotRequired[str]
+    display_name: NotRequired[str]
     namespaced_tool_id: str
     connection_id: str
     input_schema: dict[str, Any]
@@ -58,12 +149,19 @@ class Tool(TypedDict):
     revision: int
     remote_name: str
     description: str
+    access_mode: Literal["read", "write"]
+    requires_approval: bool
 
 class Mcp(TypedDict):
     id: str
     endpoint: str
     credential_ref: str
+    connector_id: NotRequired[str]
+    credential_version: NotRequired[int]
+    grant_revision: NotRequired[int]
+    connector_revision: NotRequired[int]
     revision: int
+    max_calls_per_minute: int
 
 class FileRef(TypedDict):
     id: str
@@ -106,6 +204,7 @@ class Scenario(TypedDict):
     unit: NotRequired[str]
 
 class Submit(TypedDict):
+    connector_ids: NotRequired[list[str]]
     input: str
     model_id: NotRequired[str]
     skill_ids: NotRequired[list[str]]
@@ -138,10 +237,21 @@ class MessageDelta(TypedDict):
     chunk_index: int
     text: str
 
+class ClarificationOption(TypedDict):
+    id: str
+    label: str
+    value: str
+
+class Clarification(TypedDict):
+    question: str
+    options: list[ClarificationOption]
+    allow_custom: bool
+
 class MessageCompleted(TypedDict):
     message_id: str
     text: str
     is_final: bool
+    clarification: NotRequired[Clarification]
 
 class Progress(TypedDict):
     status: str
@@ -207,6 +317,10 @@ class File(TypedDict):
     parse_error: NotRequired[str]
     parent_file_id: NotRequired[str]
     version: NotRequired[int]
+    artifact_id: NotRequired[str]
+    revision_id: NotRequired[str]
+    source_thread_id: NotRequired[str]
+    source_execution_id: NotRequired[str]
 
 class ChartPoint(TypedDict):
     label: str
@@ -279,6 +393,7 @@ class ModelCatalog(TypedDict):
     revision: int
 
 class SkillWrite(TypedDict):
+    dependencies: NotRequired[list[SkillDependency]]
     name: str
     description: str
     category: str
@@ -287,6 +402,7 @@ class SkillWrite(TypedDict):
     revision: int
 
 class SkillConfig(TypedDict):
+    dependencies: NotRequired[list[SkillDependency]]
     id: str
     name: str
     description: str
@@ -336,21 +452,30 @@ class McpToolConfig(TypedDict):
     enabled: bool
     available: bool
     trusted_read_only: bool
+    access_mode: Literal["read", "write", "blocked"]
+    requires_approval: bool
+    server_read_only_hint: bool
+    server_hint_present: bool
 
 class DiscoverRequest(TypedDict):
     endpoint: str
     credential_ref: str
 
 class DiscoveredTool(TypedDict):
+    provider_fingerprint: NotRequired[str]
+    unsupported_schema: NotRequired[bool]
     remote_name: str
     description: str
     input_schema: dict[str, Any]
     trusted_read_only: bool
+    server_read_only_hint: bool
+    server_hint_present: bool
 
 class DiscoverResult(TypedDict):
     tools: list[DiscoveredTool]
 
 class ResolveRequest(TypedDict):
+    connector_ids: NotRequired[list[str]]
     model_id: NotRequired[str]
     skill_ids: NotRequired[list[str]]
     require_tools: bool
@@ -485,6 +610,9 @@ class ArtifactWrite(TypedDict):
     media_type: Literal["text/markdown", "text/csv", "application/json"]
     content: str
     parent_file_id: NotRequired[str]
+    execution_id: NotRequired[str]
+    sha256: NotRequired[str]
+    size: NotRequired[int]
 
 class FileList(TypedDict):
     items: list[File]
@@ -584,3 +712,41 @@ class BinaryArtifactMetadata(TypedDict):
     name: str
     media_type: Literal["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/csv", "application/json", "text/markdown"]
     parent_file_id: NotRequired[str]
+    execution_id: NotRequired[str]
+    sha256: NotRequired[str]
+    size: NotRequired[int]
+
+class Artifact(TypedDict):
+    id: str
+    owner_id: str
+    title: str
+    current_revision_id: NotRequired[str]
+    created_at: str
+
+class ArtifactRevision(TypedDict):
+    id: str
+    artifact_id: str
+    version: int
+    parent_revision_id: NotRequired[str]
+    file: File
+    source_thread_id: NotRequired[str]
+    source_run_id: NotRequired[str]
+    source_execution_id: NotRequired[str]
+    status: Literal["PENDING", "READY", "FAILED"]
+    created_at: str
+
+class ArtifactRevisionList(TypedDict):
+    artifact: Artifact
+    items: list[ArtifactRevision]
+    has_more: bool
+
+class DownloadLocation(TypedDict):
+    url: str
+    expires_at: str
+    mode: Literal["presigned", "stream"]
+
+class CandidateArtifact(TypedDict):
+    name: str
+    media_type: str
+    size: int
+    sha256: str

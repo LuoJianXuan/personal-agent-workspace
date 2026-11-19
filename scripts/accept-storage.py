@@ -13,7 +13,9 @@ def main():
  finally:f.config()
  report=req('/runs/'+r+'/artifacts','POST',token=u);x.download(u,report)
  # Move only the freshly generated UUID object in this isolated volume, then restore.
- storage='/data/files/obj-'+report['id'];backup=storage+'.acceptance-backup'
+ key=d.sql("SELECT storage_key FROM backend.files WHERE id='"+report['id']+"';")
+ assert key.startswith('users/') and '..' not in key
+ storage='/data/files/'+key;backup=storage+'.acceptance-backup'
  d.run('exec','-T','backend','mv',storage,backup)
  try:
   req('/files/'+report['id']+'/content',token=u,expect=503)

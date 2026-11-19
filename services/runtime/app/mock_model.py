@@ -21,7 +21,22 @@ class MockChatModel(BaseChatModel):
         prompt=str(next((m.content for m in reversed(messages) if m.type=='human'),''))
         calls=[c['name'] for m in messages if isinstance(m,AIMessage) for c in m.tool_calls]
         def tool(name,args,id):return AIMessage(content='',tool_calls=[{'name':name,'args':args,'id':id,'type':'tool_call'}])
-        lookup=next((n for n in self.available if n.startswith('mcp_')),None)
+        specs=self.start['effective_capabilities'].get('tools',[])
+        lookup=next((t['namespaced_tool_id'] for t in specs if t.get('remote_name')=='lookup_demo_order' and t['namespaced_tool_id'] in self.available),None)
+        demo_write=next((t['namespaced_tool_id'] for t in specs if t.get('remote_name')=='create_demo_note' and t['namespaced_tool_id'] in self.available),None)
+        mcd_time=next((t['namespaced_tool_id'] for t in specs if t.get('remote_name')=='now-time-info' and t['namespaced_tool_id'] in self.available),None)
+        explicit_tools = {
+            "mock:mcd-activities": ("campaign-calendar", {}),
+            "mock:personal-account": ("fixture_account", {}),
+            "mock:personal-write": ("fixture_write", {"subject": "合成审批验收"}),
+        }
+        if prompt in explicit_tools:
+            remote, arguments = explicit_tools[prompt]
+            match = next((t["namespaced_tool_id"] for t in specs if t.get("remote_name") == remote and t["namespaced_tool_id"] in self.available), None)
+            if not match:
+                raise RunError("TOOL_DENIED")
+            if match not in calls:
+                return tool(match, arguments, "mock-personal-mcp")
         if prompt.startswith('<role>\nContext Extraction Assistant'):
             return AIMessage(content='合成摘要：保留约束 P1-KEEP。没有待执行的写入。原始历史由受控文件保留。')
         if prompt.startswith('mock:context'):
@@ -83,6 +98,12 @@ class MockChatModel(BaseChatModel):
         if 'mock:ticket' in prompt:
             if lookup and lookup not in calls:return tool(lookup,{'order_id':'DEMO-1001'},'order-lookup')
             if 'builtin_create_demo_ticket' not in calls:return tool('builtin_create_demo_ticket',{'order_id':'DEMO-1001','title':'订单跟进','description':'根据合成订单信息创建跟进工单'},'ticket-1')
+        if 'mock:mcp-write' in prompt and demo_write and demo_write not in calls:
+            return tool(demo_write,{'subject':'审批链路验收','content':'仅写入本地合成 MCP，不触达真实服务。'},'mcp-write-1')
+        if 'mock:mcd' in prompt and prompt != 'mock:mcd-activities' and mcd_time and mcd_time not in calls:
+            return tool(mcd_time,{},'mcd-now-time-1')
+        if 'mock:clarification' in prompt:
+            return AIMessage(content='请选择希望生成的报告格式。\n```clarification\n{"question":"报告应采用哪种格式？","options":[{"id":"markdown","label":"Markdown","value":"请生成 Markdown 报告"},{"id":"word","label":"Word","value":"请生成 Word 报告"}],"allow_custom":true}\n```')
         if 'mock:read' in prompt and not isinstance(messages[-1],ToolMessage):
             match=re.search(r'mock:read ([0-9a-f-]{36})',prompt)
             if match:return tool('builtin_read_material',{'file_id':match[1]},'read-1')

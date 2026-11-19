@@ -80,16 +80,23 @@ func (s *Service) Discover(c *gin.Context) {
 					}
 					revision = num(old, "revision")
 					enabled = flag(old, "enabled")
-					if str(old, "schema_hash") != schemaHash || str(old, "description") != str(t, "description") || !flag(old, "available") || flag(old, "trusted_read_only") != flag(t, "trusted_read_only") {
+					mode, requiresApproval, _, admitted := toolPolicy(str(connection, "endpoint"), str(connection, "credential_ref"), name)
+					if !admitted {
+						mode = "blocked"
+						requiresApproval = false
+					}
+					if str(old, "schema_hash") != schemaHash || str(old, "description") != str(t, "description") || !flag(old, "available") || str(old, "access_mode") != mode || flag(old, "requires_approval") != requiresApproval || flag(old, "server_read_only_hint") != flag(t, "server_read_only_hint") || flag(old, "server_hint_present") != flag(t, "server_hint_present") {
 						revision++
 						enabled = false
 					}
 				}
-				readOnly := flag(t, "trusted_read_only") && trusted(str(connection, "endpoint"), str(connection, "credential_ref"), name)
-				if !readOnly {
+				mode, requiresApproval, _, admitted := toolPolicy(str(connection, "endpoint"), str(connection, "credential_ref"), name)
+				if !admitted {
+					mode = "blocked"
+					requiresApproval = false
 					enabled = false
 				}
-				v := object{"namespaced_tool_id": tid, "connection_id": id, "remote_name": name, "description": t["description"], "input_schema": t["input_schema"], "schema_hash": schemaHash, "revision": revision, "enabled": enabled, "available": true, "trusted_read_only": readOnly}
+				v := object{"namespaced_tool_id": tid, "connection_id": id, "remote_name": name, "description": t["description"], "input_schema": t["input_schema"], "schema_hash": schemaHash, "revision": revision, "enabled": enabled, "available": true, "trusted_read_only": mode == "read", "access_mode": mode, "requires_approval": requiresApproval, "server_read_only_hint": t["server_read_only_hint"], "server_hint_present": t["server_hint_present"]}
 				if e = put(tx, "mcp_tools", v); e != nil {
 					return e
 				}
@@ -159,8 +166,9 @@ func (s *Service) SetTool(c *gin.Context) {
 		if num(v, "revision") != num(tool, "revision") {
 			return conflict()
 		}
-		if flag(v, "enabled") && (!flag(conn, "enabled") || str(conn, "probe_status") != "success" || !flag(tool, "available") || !flag(tool, "trusted_read_only") || !trusted(str(conn, "endpoint"), str(conn, "credential_ref"), str(tool, "remote_name"))) {
-			return fault{403, "TOOL_DENIED", "工具未通过发现或部署只读准入"}
+		mode, requiresApproval, _, admitted := toolPolicy(str(conn, "endpoint"), str(conn, "credential_ref"), str(tool, "remote_name"))
+		if flag(v, "enabled") && (!flag(conn, "enabled") || str(conn, "probe_status") != "success" || !flag(tool, "available") || !admitted || str(tool, "access_mode") != mode || flag(tool, "requires_approval") != requiresApproval) {
+			return fault{403, "TOOL_DENIED", "工具未通过发现或部署准入"}
 		}
 		tool["enabled"] = flag(v, "enabled")
 		tool["revision"] = num(tool, "revision") + 1
@@ -195,7 +203,8 @@ func enabledTools(tx *gorm.DB) ([]object, []object, error) {
 	conns := []object{}
 	for _, t := range tools {
 		c := available[str(t, "connection_id")]
-		if c != nil && flag(t, "enabled") && flag(t, "available") && flag(t, "trusted_read_only") && trusted(str(c, "endpoint"), str(c, "credential_ref"), str(t, "remote_name")) {
+		mode, requiresApproval, _, admitted := toolPolicy(str(c, "endpoint"), str(c, "credential_ref"), str(t, "remote_name"))
+		if c != nil && flag(t, "enabled") && flag(t, "available") && admitted && str(t, "access_mode") == mode && flag(t, "requires_approval") == requiresApproval {
 			out = append(out, t)
 			if !used[str(c, "id")] {
 				conns = append(conns, c)
@@ -206,10 +215,24 @@ func enabledTools(tx *gorm.DB) ([]object, []object, error) {
 	return out, conns, nil
 }
 func (s *Service) CatalogTools(c *gin.Context) {
-	v, _, e := enabledTools(s.DB.WithContext(c.Request.Context()))
+	tx := s.DB.WithContext(c.Request.Context())
+	v, _, e := enabledTools(tx)
 	if e != nil {
 		fail(c, e)
 		return
+	}
+	userTools, _, e := personalCapabilities(tx, personalOwner(c))
+	if e != nil {
+		fail(c, e)
+		return
+	}
+	for _, tool := range userTools {
+		tool["enabled"], tool["available"] = true, true
+		tool["trusted_read_only"] = !flag(tool, "requires_approval")
+		tool["server_read_only_hint"], tool["server_hint_present"] = false, false
+		delete(tool, "fingerprint")
+		delete(tool, "display_name")
+		v = append(v, tool)
 	}
 	c.JSON(200, gin.H{"items": v})
 }

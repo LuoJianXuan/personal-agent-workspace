@@ -14,7 +14,9 @@
           "order_id"
         ]
       },
-      "trusted_read_only": true
+      "trusted_read_only": true,
+      "server_read_only_hint": true,
+      "server_hint_present": true
     }
   ]
 }

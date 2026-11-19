@@ -103,7 +103,7 @@ func (s *Service) ExtractFile(c *gin.Context) {
 		c.Data(200, "application/json", cached.Data)
 		return
 	}
-	data, err := readStored(row)
+	data, err := s.readStored(row)
 	if err != nil {
 		failure(c, 503, safeFileError(err))
 		return
@@ -190,64 +190,6 @@ func (s *Service) WorkFiles(c *gin.Context) {
 	}
 	c.JSON(200, file)
 }
-func (s *Service) FileVersions(c *gin.Context) {
-	row, ok := s.ownedFile(c)
-	if !ok {
-		return
-	}
-	out := []contracts.File{filePublic(row)}
-	seen := map[string]bool{row.ID: true}
-	for len(out) < 30 {
-		parent := out[len(out)-1].ParentFileId
-		if parent == nil || seen[*parent] {
-			break
-		}
-		seen[*parent] = true
-		var previous fileRow
-		if s.DB.Where("id=? AND owner_id=?", *parent, identity(c).UserId).Take(&previous).Error != nil {
-			break
-		}
-		out = append(out, filePublic(previous))
-	}
-	c.JSON(200, contracts.FileList{Items: out, HasMore: false})
-}
-func (s *Service) bindParent(file contracts.File, parent *string, run string) (contracts.File, error) {
-	if parent == nil {
-		return file, nil
-	}
-	var start contracts.Start
-	e := s.DB.Transaction(func(tx *gorm.DB) error { var err error; start, err = s.Control.CheckExecution(tx, run); return err })
-	if e != nil {
-		return file, e
-	}
-	allowed := false
-	for _, ref := range start.FileRefs {
-		if ref.Id == *parent {
-			allowed = true
-		}
-	}
-	if !allowed {
-		return file, errors.New("FILE_NOT_AUTHORIZED")
-	}
-	var row fileRow
-	if e = s.DB.Where("id=? AND owner_id=?", *parent, file.OwnerId).Take(&row).Error; e != nil {
-		return file, e
-	}
-	if file.ParentFileId != nil {
-		if *file.ParentFileId != *parent {
-			return file, errors.New("ARTIFACT_CONFLICT")
-		}
-		return file, nil
-	}
-	file.ParentFileId = parent
-	v := int64(2)
-	previous := filePublic(row)
-	if previous.Version != nil {
-		v = *previous.Version + 1
-	}
-	file.Version = &v
-	return file, s.DB.Model(&fileRow{}).Where("id=?", file.Id).Update("data", encodeJSON(file)).Error
-}
 func (s *Service) InternalBinaryArtifact(c *gin.Context) {
 	var raw any
 	if json.Unmarshal([]byte(c.GetHeader("X-Artifact-Metadata")), &raw) != nil || contracts.Validate("BinaryArtifactMetadata", raw) != nil {
@@ -308,10 +250,11 @@ func (s *Service) InternalBinaryArtifact(c *gin.Context) {
 			return
 		}
 	}
-	f, e := s.storeFile(start.Context.UserId, &req.RunId, &req.ArtifactKey, req.Name, req.MediaType, data)
-	if e == nil {
-		f, e = s.bindParent(f, req.ParentFileId, req.RunId)
+	if e := verifyCandidate(data, req.Sha256, req.Size); e != nil {
+		failure(c, 400, safeFileError(e))
+		return
 	}
+	f, e := s.storeFile(start.Context.UserId, &req.RunId, &req.ArtifactKey, req.Name, req.MediaType, data, req.ParentFileId, req.ExecutionId)
 	if e == nil && binaryMedia(f.MediaType) {
 		state := "not_extracted"
 		f.ParseStatus = &state

@@ -2,6 +2,7 @@ import asyncio,json,os
 from datetime import datetime,timezone,timedelta
 from uuid import UUID,uuid5
 from psycopg.types.json import Jsonb
+from jsonschema import Draft202012Validator
 from contracts.validate import validate
 from .canonical import canonical
 from .models import RunError
@@ -26,7 +27,7 @@ class ApprovalService:
         async with self.engine.pool.connection() as c:rows=await (await c.execute('SELECT proposal,status FROM runtime.approvals WHERE run_id=%s AND published ORDER BY approval_id',(run,))).fetchall()
         return {'items':[{**r['proposal'],'status':r['status']} for r in rows]}
     async def prepare(self,start,call,tool):
-        args=json.loads(call['function']['arguments']);validate('TicketArgs',args)
+        args=json.loads(call['function']['arguments']);Draft202012Validator(tool['input_schema']).validate(args)
         raw,digest=canonical(args);eid=str(uuid5(UUID(start['run_id']),call['id']));aid=str(uuid5(UUID(eid),'approval'))
         ttl=600
         if os.getenv('ENABLE_FAULTS')=='true':ttl=max(2,min(600,int(os.getenv('APPROVAL_TTL_SECONDS','600'))))
@@ -44,7 +45,7 @@ class ApprovalService:
             state=await driver.graph.aget_state({'configurable':{'thread_id':start['run_id']}})
         pending=[i.value for task in state.tasks for i in task.interrupts if isinstance(i.value,dict)]
         actions=[action for payload in pending for action in payload.get('action_requests',[])]
-        if len(actions)!=1 or actions[0]['name']!='builtin_create_demo_ticket':return None
+        if len(actions)!=1:return None
         action=actions[0]
         message=next((m for m in reversed(state.values.get('messages',[])) if isinstance(m,AIMessage) and m.tool_calls),None)
         if message is None:return None
@@ -52,15 +53,19 @@ class ApprovalService:
         if len(calls)!=1:return None
         native=calls[0]
         call={'id':native['id'],'function':{'name':native['name'],'arguments':json.dumps(native['args'],ensure_ascii=False)}}
-        tool=next((t for t in start['effective_capabilities'].get('builtin_tools',[]) if t['namespaced_tool_id']==native['name']),None)
-        if not tool:return None
+        specs=start['effective_capabilities'].get('builtin_tools',[])+start['effective_capabilities'].get('tools',[])
+        tool=next((t for t in specs if t['namespaced_tool_id']==native['name']),None)
+        if not tool or (native['name']!='builtin_create_demo_ticket' and not tool.get('requires_approval')):return None
         aid=await self.prepare(start,call,tool)
         p=await self.get(aid)
         async with self.engine.pool.connection() as c:
             executed=await (await c.execute('SELECT status FROM runtime.tool_executions WHERE execution_id=%s',(p['execution_id'],))).fetchone()
         return None if executed else p
     async def execution_binding(self,start,call):
-        if call['function']['name']!='builtin_create_demo_ticket':return None,None
+        name=call['function']['name']
+        specs=start['effective_capabilities'].get('builtin_tools',[])+start['effective_capabilities'].get('tools',[])
+        tool=next((t for t in specs if t['namespaced_tool_id']==name),None)
+        if not tool or (name!='builtin_create_demo_ticket' and not tool.get('requires_approval')):return None,None
         eid=str(uuid5(UUID(start['run_id']),call['id']));aid=str(uuid5(UUID(eid),'approval'))
         proposal=await self.get(aid)
         async with self.engine.pool.connection() as c:

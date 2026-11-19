@@ -1,0 +1,16 @@
+services:
+  backend:
+    environment:
+      ACCESS_POLICY_PATH: /test-policy/targets.json
+    volumes:
+      - ./tests/fixtures/personal-targets.json:/test-policy/targets.json:ro
+  runtime:
+    environment:
+      ACCESS_POLICY_PATH: /test-policy/targets.json
+    volumes:
+      - ./tests/fixtures/personal-targets.json:/test-policy/targets.json:ro
+  personal-mcp-fixture:
+    image: ${COMPOSE_PROJECT_NAME:?Use an explicit test project}-runtime:phase1
+    command: [uvicorn, personal_mcp:app, --app-dir, /fixture, --host, 0.0.0.0, --port, "8004", --no-access-log]
+    volumes:
+      - ./tests/fixtures/personal_mcp.py:/fixture/personal_mcp.py:ro

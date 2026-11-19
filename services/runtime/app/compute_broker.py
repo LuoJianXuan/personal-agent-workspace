@@ -3,6 +3,7 @@ import asyncio,base64,hashlib,hmac,io,json,logging,os,tarfile,time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID
+from typing import Literal
 import httpx
 from fastapi import FastAPI,Request
 from fastapi.responses import JSONResponse
@@ -64,12 +65,19 @@ class InputFile(BaseModel):
     model_config=ConfigDict(extra='forbid')
     id:UUID
     content:str=Field(max_length=7*1024*1024)
+class Limits(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    wall_seconds:Literal[35]=35
+    cpu_seconds:Literal[30]=30
+    memory_bytes:Literal[536870912]=536870912
+    pids:Literal[64]=64
 class Job(BaseModel):
     model_config=ConfigDict(extra='forbid')
     execution_id:UUID
     run_id:UUID
     code:str=Field(max_length=30000)
     files:list[InputFile]=Field(max_length=3)
+    limits:Limits=Field(default_factory=Limits)
 
 @app.post('/jobs')
 async def execute(request:Request):
@@ -108,10 +116,10 @@ async def execute(request:Request):
                 settings={'Image':IMAGE,'User':'10001:10001','WorkingDir':'/work','NetworkDisabled':True,
                     'Labels':{'agent.workspace.compute':NAMESPACE,'agent.workspace.execution':eid,'agent.workspace.request':digest},
                     'HostConfig':{'NetworkMode':'none','ReadonlyRootfs':True,'CapDrop':['ALL'],'SecurityOpt':['no-new-privileges'],
-                        'Memory':512*1024*1024,'MemorySwap':512*1024*1024,'NanoCpus':1000000000,'PidsLimit':64,
+                        'Memory':job.limits.memory_bytes,'MemorySwap':job.limits.memory_bytes,'NanoCpus':1000000000,'PidsLimit':job.limits.pids,
                         'Mounts':[{'Type':'volume','Source':volume,'Target':'/work','ReadOnly':False,'VolumeOptions':{'NoCopy':True}}],
                         'Tmpfs':{'/tmp':'rw,noexec,nosuid,nodev,size=8388608'},
-                        'Ulimits':[{'Name':'cpu','Soft':30,'Hard':30},{'Name':'fsize','Soft':16*1024*1024,'Hard':16*1024*1024}],
+                        'Ulimits':[{'Name':'cpu','Soft':job.limits.cpu_seconds,'Hard':job.limits.cpu_seconds},{'Name':'fsize','Soft':16*1024*1024,'Hard':16*1024*1024}],
                         'LogConfig':{'Type':'none'}}}
                 r=await client.post('/containers/create',params={'name':name},json=settings)
                 checked(r,201,'COMPUTE_CREATE_FAILED')
@@ -123,7 +131,7 @@ async def execute(request:Request):
                 r=await client.put('/containers/'+name+'/archive',params={'path':'/work'},content=archive('job.json',job.model_dump_json().encode()),headers={'Content-Type':'application/x-tar'});checked(r,200,'COMPUTE_INPUT_TRANSFER_FAILED')
                 # Read tmpfs output while the trusted wrapper is alive. Stopping a
                 # container first would discard its tmpfs output.
-                async with asyncio.timeout(35):
+                async with asyncio.timeout(job.limits.wall_seconds):
                     while True:
                         if cancelled.exists():raise ValueError('COMPUTE_CANCELLED')
                         r=await client.get('/containers/'+name+'/archive',params={'path':'/work/result.json'})
@@ -140,6 +148,7 @@ async def execute(request:Request):
                     if not isinstance(item.get('name'),str) or Path(item['name']).name!=item['name'] or '/' in item['name'] or '\\' in item['name'] or len(item['name'])>120:raise ValueError('OUTPUT_INVALID')
                     raw=base64.b64decode(item['content'],validate=True);total+=len(raw)
                     if len(raw)>5*1024*1024 or total>10*1024*1024:raise ValueError('OUTPUT_LIMIT')
+                    if item.get('sha256')!=hashlib.sha256(raw).hexdigest() or item.get('size')!=len(raw):raise ValueError('OUTPUT_INVALID')
                 result['stdout']=str(result.get('stdout',''))[:65536];result['stderr']=str(result.get('stderr',''))[:65536]
             except asyncio.TimeoutError:result['error']='COMPUTE_TIMEOUT'
             except Exception as error:result={'error':'COMPUTE_CANCELLED' if cancelled.exists() else str(error) if isinstance(error,LaunchError) else 'COMPUTE_FAILED','files':[],'stdout':'','stderr':''}

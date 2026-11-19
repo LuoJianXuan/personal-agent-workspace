@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Collapse, Empty, Select, Space, Tag } from 'antd';
+import { Alert, Button, Card, Collapse, Empty, Select, Space, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { api } from './api';
+import { api, downloadFile } from './api';
 import { validate } from './contracts/validate';
 import type { Event as RunEvent, TaskUpdate, SourceRecord, ParsedDocument, File as StoredFile, FileList } from './contracts/models';
 
@@ -12,17 +12,21 @@ export function Phase1Activity({ events }: { events: RunEvent[] }) {
   const compacted=events.some(e=>e.type==='context.compacted');
   const labels:Record<string,string>={pending:'待处理',in_progress:'进行中',completed:'已完成',failed:'失败',skipped:'已跳过'};
   if(!tasks&&!sources.length&&!compacted)return null;
-  return <section className="phase1-activity">{compacted&&<Tag>已整理较早上下文，原历史保留</Tag>}
-    <Collapse size="small" items={[
-      ...(tasks?[{key:'steps',label:`工作步骤 · ${tasks.tasks.filter(t=>t.status==='completed').length}/${tasks.tasks.length}`,children:<ol className="task-steps">{tasks.tasks.map(t=><li key={t.id}><Tag color={t.status==='in_progress'?'processing':t.status==='completed'?'success':'default'}>{labels[t.status]}</Tag>{t.title}</li>)}</ol>}]:[]),
-      ...(sources.length?[{key:'sources',label:`资料与来源 · ${sources.length}`,children:<div className="source-list">{sources.map(s=><article key={s.source_id}>
+  const completed=tasks?.tasks.filter(t=>t.status==='completed').length||0;
+  return <section className="phase1-activity">
+    {tasks&&<Card size="small" className="plan-card" title="执行计划" extra={<Tag color={completed===tasks.tasks.length?'success':'processing'}>{completed}/{tasks.tasks.length}</Tag>}>
+      <ol className="task-steps">{tasks.tasks.map(t=><li key={t.id} className={`task-${t.status}`}><span className="task-marker" aria-hidden="true"/><div><Tag color={t.status==='in_progress'?'processing':t.status==='completed'?'success':t.status==='failed'?'error':'default'}>{labels[t.status]}</Tag><span>{t.title}</span></div></li>)}</ol>
+    </Card>}
+    {compacted&&<Tag>已整理较早上下文，原历史保留</Tag>}
+    {sources.length>0&&<Collapse size="small" items={[
+      {key:'sources',label:`资料与来源 · ${sources.length}`,children:<div className="source-list">{sources.map(s=><article key={s.source_id}>
         <Space wrap><Tag>{s.kind==='file'?'资料':s.read_status==='search_only'?'搜索摘要':'已读取网页'}</Tag>{s.read_status==='truncated'&&<Tag color="warning">部分读取</Tag>}<strong>{s.title}</strong></Space>
         <p>{s.locator} · {new Date(s.retrieved_at).toLocaleString()}</p><blockquote>{s.excerpt}</blockquote>
         {s.url&&<a href={s.url} target="_blank" rel="noopener noreferrer">打开原网页</a>}
         {s.file_id&&<Button size="small" onClick={()=>nav(`/app/library?file=${s.file_id}&locator=${encodeURIComponent(s.locator)}`)}>定位资料</Button>}
         <small>引用：{s.source_id}</small>
-      </article>)}</div>}]:[])
-    ]}/>
+      </article>)}</div>}
+    ]}/>}
   </section>;
 }
 
@@ -44,7 +48,19 @@ export function DocumentPreview({file,locator}:{file:StoredFile;locator?:string}
 }
 
 export function FileVersions({file,onSelect,selectedId}:{file:StoredFile;selectedId?:string;onSelect:(f:StoredFile)=>void}){
-  const [files,setFiles]=useState<StoredFile[]>([]);
-  useEffect(()=>{let live=true;api<FileList>(`/files/${file.id}/versions`).then(r=>{if(live)setFiles(r.items)}).catch(()=>{if(live)setFiles([])});return()=>{live=false};},[file.id]);
-  return files.length>1?<Space className="file-versions"><span>产物版本</span><Select value={selectedId||file.id} style={{minWidth:230}} options={files.map(f=>({value:f.id,label:`v${f.version||1} · ${f.name}`}))} onChange={id=>{const next=files.find(f=>f.id===id);if(next)onSelect(next)}}/></Space>:null;
+  const nav=useNavigate();
+  const [files,setFiles]=useState<StoredFile[]>([]),[error,setError]=useState('');
+  useEffect(()=>{let live=true;setError('');api<FileList>(`/files/${file.id}/versions`).then(r=>{if(live)setFiles(r.items)}).catch(()=>{if(live)setError('版本列表暂不可用，请稍后重试')});return()=>{live=false};},[file.id]);
+  if(file.source!=='generated')return null;
+  const chosen=files.find(f=>f.id===(selectedId||file.id))||file;
+  return <Space direction="vertical" style={{width:'100%',marginBottom:16}}>
+    {error&&<Alert type="warning" message={error}/>}
+    <Space wrap className="file-versions"><span>产物版本</span><Select value={chosen.id} style={{minWidth:230,maxWidth:'100%'}} options={(files.length?files:[file]).map(f=>({value:f.id,label:`v${f.version||1} · ${f.name}`}))} onChange={id=>{const next=files.find(f=>f.id===id);if(next)onSelect(next)}}/>
+      <Button size="small" disabled={chosen.status!=='READY'} onClick={()=>downloadFile(chosen.id,chosen.name).catch(()=>setError('下载暂不可用，请检查文件状态后重试'))}>下载此版本</Button>
+      <Button size="small" disabled={chosen.status!=='READY'} onClick={()=>nav(`/app/chat?file=${chosen.id}`)}>基于此版本继续</Button>
+    </Space>
+    <Space wrap><Tag>{chosen.status==='READY'?'可用':chosen.status==='PENDING'?'正在发布':'发布失败'}</Tag><span>{new Date(chosen.created_at).toLocaleString()}</span>
+      {chosen.source_thread_id&&<Button size="small" type="link" onClick={()=>nav(`/app/chat?thread=${chosen.source_thread_id}`)}>来源会话</Button>}
+    </Space>
+  </Space>;
 }

@@ -22,6 +22,12 @@ func pick(v object, keys ...string) object {
 func (s *Service) resolve(ctx context.Context, identity contracts.Context, input object) (contracts.Snapshot, error) {
 	var snapshot contracts.Snapshot
 	status, statusErr := s.deployment(ctx)
+	environment := object{}
+	if statusErr == nil {
+		probeContext, cancel := context.WithTimeout(ctx, time.Second)
+		_ = s.runtime(probeContext, "/internal/capabilities/network", nil, &environment)
+		cancel()
+	}
 	e := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if e := lock(tx); e != nil {
 			return e
@@ -74,13 +80,65 @@ func (s *Service) resolve(ctx context.Context, identity contracts.Context, input
 		if len(selected) > 3 {
 			return invalid("每轮最多选择 3 个技能，请明确选择")
 		}
+		userTools, userConnections, e := personalCapabilities(tx, identity.UserId)
+		if e != nil {
+			return e
+		}
+		if ids, explicit := input["connector_ids"].([]any); explicit {
+			selectedIDs := map[string]bool{}
+			for _, value := range ids {
+				selectedIDs[value.(string)] = true
+			}
+			selectedConnections := map[string]bool{}
+			filtered := []object{}
+			for _, connection := range userConnections {
+				id := str(connection, "connector_id")
+				if selectedIDs[id] {
+					filtered = append(filtered, connection)
+					selectedConnections[str(connection, "id")] = true
+					delete(selectedIDs, id)
+				}
+			}
+			if len(selectedIDs) != 0 {
+				return connectionError("CONNECTION_REQUIRED", "选中的个人连接不可用，请检查连接状态")
+			}
+			userConnections = filtered
+			filtered = []object{}
+			for _, tool := range userTools {
+				if selectedConnections[str(tool, "connection_id")] {
+					filtered = append(filtered, tool)
+				}
+			}
+			userTools = filtered
+		}
 		outSkills := []object{}
 		for _, v := range skills {
 			if selected[str(v, "id")] {
 				if !flag(v, "enabled") {
 					return fault{409, "CAPABILITY_CHANGED", "选中的技能已禁用"}
 				}
-				outSkills = append(outSkills, pick(v, "id", "name", "content", "revision"))
+				skill := pick(v, "id", "name", "content", "revision")
+				var dependencies []contracts.SkillDependency
+				if raw, ok := v["dependencies"]; ok {
+					if err := json.Unmarshal(encode(raw), &dependencies); err != nil {
+						return err
+					}
+				}
+				for _, dep := range dependencies {
+					if flag(caps, "tool_calling") && dependencyReady(dep, userConnections, environment, flag(input, "network_enabled")) {
+						continue
+					}
+					if dep.Required {
+						if dep.Kind == "connector" {
+							def, _ := personalDefinition(dep.CapabilityId)
+							return connectionError("SKILL_DEPENDENCY_MISSING", "技能需要连接："+def.ConnectorName)
+						}
+						return connectionError("SKILL_DEPENDENCY_MISSING", "技能所需工具不可用："+dep.CapabilityId)
+					}
+					missing, _ := skill["missing_optional_dependencies"].([]contracts.SkillDependency)
+					skill["missing_optional_dependencies"] = append(missing, dep)
+				}
+				outSkills = append(outSkills, skill)
 				delete(selected, str(v, "id"))
 			}
 		}
@@ -95,10 +153,17 @@ func (s *Service) resolve(ctx context.Context, identity contracts.Context, input
 		outConnections := []object{}
 		if flag(caps, "tool_calling") {
 			for _, v := range tools {
-				outTools = append(outTools, pick(v, "namespaced_tool_id", "connection_id", "remote_name", "description", "input_schema", "schema_hash", "revision"))
+				outTools = append(outTools, pick(v, "namespaced_tool_id", "connection_id", "remote_name", "description", "input_schema", "schema_hash", "revision", "access_mode", "requires_approval"))
 			}
 			for _, v := range connections {
-				outConnections = append(outConnections, pick(v, "id", "endpoint", "credential_ref", "revision"))
+				connection := pick(v, "id", "endpoint", "credential_ref", "revision")
+				connection["max_calls_per_minute"] = mcpLimit(str(v, "endpoint"), str(v, "credential_ref"))
+				outConnections = append(outConnections, connection)
+			}
+			outTools = append(outTools, userTools...)
+			outConnections = append(outConnections, userConnections...)
+			if len(outTools) > 100 {
+				return connectionError("CONNECTION_TOOL_LIMIT", "当前授权的工具过多，请减少本轮选择的连接")
 			}
 		}
 		refs := []object{}
@@ -134,6 +199,31 @@ func (s *Service) resolve(ctx context.Context, identity contracts.Context, input
 		return tx.Exec("INSERT INTO backend.capability_snapshots(id,owner_id,data) VALUES(?,?,?::jsonb)", snapshot.SnapshotId, identity.UserId, string(raw)).Error
 	})
 	return snapshot, e
+}
+
+func dependencyReady(dep contracts.SkillDependency, connections []object, environment object, network bool) bool {
+	if dep.Kind == "connector" {
+		for _, connection := range connections {
+			if str(connection, "connector_id") == dep.CapabilityId {
+				return true
+			}
+		}
+		return false
+	}
+	switch dep.CapabilityId {
+	case "builtin_web_search":
+		return network && flag(environment, "search_available")
+	case "builtin_fetch_page":
+		return network && flag(environment, "fetch_available")
+	case "builtin_python":
+		return flag(environment, "compute_available")
+	}
+	for _, tool := range BuiltinTools() {
+		if tool.NamespacedToolId == dep.CapabilityId {
+			return true
+		}
+	}
+	return false
 }
 
 // Snapshot is the control-plane application boundary for the Day 3 entry orchestrator.

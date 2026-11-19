@@ -42,13 +42,104 @@ export interface Model {
   capabilities: ModelCapabilities;
   revision: number;
 }
+export interface SkillDependency {
+  kind: "builtin" | "connector";
+  capability_id: string;
+  required: boolean;
+}
+export interface PersonalProbeWrite {
+  revision: number;
+  token?: string;
+}
+export interface PersonalGrantWrite {
+  revision: number;
+  catalog_hash: string;
+  mode: "query" | "full";
+}
+export interface PersonalToolPreview {
+  reason?: "UNSUPPORTED_SCHEMA" | "PLATFORM_BLOCKED";
+  name: string;
+  policy: "read" | "confirm" | "unknown" | "blocked";
+  granted: boolean;
+}
+export interface ConnectorPresentation {
+  description: string;
+  category: string;
+  icon: "plug" | "mcd" | "search" | "library" | "map";
+  token_help_url: string;
+}
+export interface PlatformMcpTool {
+  name: string;
+  description: string;
+  requires_approval: boolean;
+}
+export interface PlatformMcpService {
+  id: string;
+  name: string;
+  availability: "configured" | "unavailable";
+  reason: string;
+  tools: Array<PlatformMcpTool>;
+}
+export interface PlatformMcpServiceList {
+  items: Array<PlatformMcpService>;
+}
+export interface PersonalConnection {
+  connector_id: string;
+  presentation?: ConnectorPresentation;
+  name: string;
+  connection_id?: string;
+  revision: number;
+  status: "unconfigured" | "disconnected" | "pending" | "ready" | "auth_required";
+  catalog_hash: string;
+  pending: boolean;
+  tools: Array<PersonalToolPreview>;
+}
+export interface PersonalConnectionList {
+  items: Array<PersonalConnection>;
+}
+export interface ConnectorSettingsWrite {
+  presentation?: ConnectorPresentation;
+  name: string;
+  enabled: boolean;
+  revision: number;
+}
+export interface ConnectorSettings {
+  presentation?: ConnectorPresentation;
+  connector_id: string;
+  endpoint: string;
+  name: string;
+  enabled: boolean;
+  revision: number;
+}
+export interface ConnectorSettingsList {
+  items: Array<ConnectorSettings>;
+}
+export interface PersonalDiscovery {
+  operation_id: string;
+}
+export interface PersonalExecutionMaterial {
+  run_id: string;
+  execution_id: string;
+  tool_id: string;
+  args_hash: string;
+  decision_id?: string;
+  auth_failed?: boolean;
+}
+export interface PersonalSecretMaterial {
+  endpoint: string;
+  credential_ref: string;
+  token: string;
+}
 export interface Skill {
   id: string;
   name: string;
   content: string;
+  missing_optional_dependencies?: Array<SkillDependency>;
   revision: number;
 }
 export interface Tool {
+  fingerprint?: string;
+  display_name?: string;
   namespaced_tool_id: string;
   connection_id: string;
   input_schema: Record<string, unknown>;
@@ -56,12 +147,19 @@ export interface Tool {
   revision: number;
   remote_name: string;
   description: string;
+  access_mode: "read" | "write";
+  requires_approval: boolean;
 }
 export interface Mcp {
   id: string;
   endpoint: string;
   credential_ref: string;
+  connector_id?: string;
+  credential_version?: number;
+  grant_revision?: number;
+  connector_revision?: number;
   revision: number;
+  max_calls_per_minute: number;
 }
 export interface FileRef {
   id: string;
@@ -104,6 +202,7 @@ export interface Scenario {
   unit?: string;
 }
 export interface Submit {
+  connector_ids?: Array<string>;
   input: string;
   model_id?: string;
   skill_ids?: Array<string>;
@@ -136,10 +235,21 @@ export interface MessageDelta {
   chunk_index: number;
   text: string;
 }
+export interface ClarificationOption {
+  id: string;
+  label: string;
+  value: string;
+}
+export interface Clarification {
+  question: string;
+  options: Array<ClarificationOption>;
+  allow_custom: boolean;
+}
 export interface MessageCompleted {
   message_id: string;
   text: string;
   is_final: boolean;
+  clarification?: Clarification;
 }
 export interface Progress {
   status: string;
@@ -205,6 +315,10 @@ export interface File {
   parse_error?: string;
   parent_file_id?: string;
   version?: number;
+  artifact_id?: string;
+  revision_id?: string;
+  source_thread_id?: string;
+  source_execution_id?: string;
 }
 export interface ChartPoint {
   label: string;
@@ -277,6 +391,7 @@ export interface ModelCatalog {
   revision: number;
 }
 export interface SkillWrite {
+  dependencies?: Array<SkillDependency>;
   name: string;
   description: string;
   category: string;
@@ -285,6 +400,7 @@ export interface SkillWrite {
   revision: number;
 }
 export interface SkillConfig {
+  dependencies?: Array<SkillDependency>;
   id: string;
   name: string;
   description: string;
@@ -334,21 +450,30 @@ export interface McpToolConfig {
   enabled: boolean;
   available: boolean;
   trusted_read_only: boolean;
+  access_mode: "read" | "write" | "blocked";
+  requires_approval: boolean;
+  server_read_only_hint: boolean;
+  server_hint_present: boolean;
 }
 export interface DiscoverRequest {
   endpoint: string;
   credential_ref: string;
 }
 export interface DiscoveredTool {
+  provider_fingerprint?: string;
+  unsupported_schema?: boolean;
   remote_name: string;
   description: string;
   input_schema: Record<string, unknown>;
   trusted_read_only: boolean;
+  server_read_only_hint: boolean;
+  server_hint_present: boolean;
 }
 export interface DiscoverResult {
   tools: Array<DiscoveredTool>;
 }
 export interface ResolveRequest {
+  connector_ids?: Array<string>;
   model_id?: string;
   skill_ids?: Array<string>;
   require_tools: boolean;
@@ -483,6 +608,9 @@ export interface ArtifactWrite {
   media_type: "text/markdown" | "text/csv" | "application/json";
   content: string;
   parent_file_id?: string;
+  execution_id?: string;
+  sha256?: string;
+  size?: number;
 }
 export interface FileList {
   items: Array<File>;
@@ -582,4 +710,42 @@ export interface BinaryArtifactMetadata {
   name: string;
   media_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/csv" | "application/json" | "text/markdown";
   parent_file_id?: string;
+  execution_id?: string;
+  sha256?: string;
+  size?: number;
+}
+export interface Artifact {
+  id: string;
+  owner_id: string;
+  title: string;
+  current_revision_id?: string;
+  created_at: string;
+}
+export interface ArtifactRevision {
+  id: string;
+  artifact_id: string;
+  version: number;
+  parent_revision_id?: string;
+  file: File;
+  source_thread_id?: string;
+  source_run_id?: string;
+  source_execution_id?: string;
+  status: "PENDING" | "READY" | "FAILED";
+  created_at: string;
+}
+export interface ArtifactRevisionList {
+  artifact: Artifact;
+  items: Array<ArtifactRevision>;
+  has_more: boolean;
+}
+export interface DownloadLocation {
+  url: string;
+  expires_at: string;
+  mode: "presigned" | "stream";
+}
+export interface CandidateArtifact {
+  name: string;
+  media_type: string;
+  size: number;
+  sha256: string;
 }

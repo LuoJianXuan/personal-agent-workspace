@@ -1,6 +1,7 @@
 package agententry
 
 import (
+	"agentworkspace/backend/internal/blobstore"
 	"agentworkspace/backend/internal/contracts"
 	"agentworkspace/backend/internal/control"
 	"agentworkspace/backend/internal/platform"
@@ -23,6 +24,7 @@ import (
 )
 
 type Service struct {
+	Blobs         *blobstore.Registry
 	DB            *gorm.DB
 	Control       *control.Service
 	Client        *HTTPClient

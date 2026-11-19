@@ -211,6 +211,164 @@
         "revision"
       ]
     },
+    "SkillDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["builtin", "connector"] },
+        "capability_id": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "required": { "type": "boolean" }
+      },
+      "required": ["kind", "capability_id", "required"]
+    },
+    "PersonalProbeWrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revision": { "type": "integer", "minimum": 0 },
+        "token": { "type": "string", "minLength": 12, "maxLength": 2048, "pattern": "^[!-~]+$", "writeOnly": true }
+      },
+      "required": ["revision"]
+    },
+    "PersonalGrantWrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revision": { "type": "integer", "minimum": 1 },
+        "catalog_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "mode": { "type": "string", "enum": ["query", "full"] }
+      },
+      "required": ["revision", "catalog_hash", "mode"]
+    },
+    "PersonalToolPreview": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reason": { "type": "string", "enum": ["UNSUPPORTED_SCHEMA", "PLATFORM_BLOCKED"] },
+        "name": { "type": "string" },
+        "policy": { "type": "string", "enum": ["read", "confirm", "unknown", "blocked"] },
+        "granted": { "type": "boolean" }
+      },
+      "required": ["name", "policy", "granted"]
+    },
+    "ConnectorPresentation": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string", "maxLength": 500 },
+        "category": { "type": "string", "maxLength": 40 },
+        "icon": { "type": "string", "enum": ["plug", "mcd", "search", "library", "map"] },
+        "token_help_url": { "type": "string", "maxLength": 500, "pattern": "^(https://[^\\s]+)?$" }
+      },
+      "required": ["description", "category", "icon", "token_help_url"]
+    },
+    "PlatformMcpTool": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" }, "description": { "type": "string" },
+        "requires_approval": { "type": "boolean" }
+      }, "required": ["name", "description", "requires_approval"]
+    },
+    "PlatformMcpService": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" },
+        "availability": { "type": "string", "enum": ["configured", "unavailable"] },
+        "reason": { "type": "string" },
+        "tools": { "type": "array", "items": { "$ref": "#/$defs/PlatformMcpTool" } }
+      }, "required": ["id", "name", "availability", "reason", "tools"]
+    },
+    "PlatformMcpServiceList": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "items": { "type": "array", "items": { "$ref": "#/$defs/PlatformMcpService" } } },
+      "required": ["items"]
+    },
+    "PersonalConnection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "connector_id": { "type": "string" },
+        "presentation": { "$ref": "#/$defs/ConnectorPresentation" },
+        "name": { "type": "string" },
+        "connection_id": { "type": "string", "format": "uuid" },
+        "revision": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["unconfigured", "disconnected", "pending", "ready", "auth_required"] },
+        "catalog_hash": { "type": "string" },
+        "pending": { "type": "boolean" },
+        "tools": { "type": "array", "items": { "$ref": "#/$defs/PersonalToolPreview" } }
+      },
+      "required": ["connector_id", "name", "revision", "status", "catalog_hash", "pending", "tools"]
+    },
+    "PersonalConnectionList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/PersonalConnection" } }
+      },
+      "required": ["items"]
+    },
+    "ConnectorSettingsWrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "presentation": { "$ref": "#/$defs/ConnectorPresentation" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "enabled": { "type": "boolean" },
+        "revision": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["name", "enabled", "revision"]
+    },
+    "ConnectorSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "presentation": { "$ref": "#/$defs/ConnectorPresentation" },
+        "connector_id": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "enabled": { "type": "boolean" },
+        "revision": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["connector_id", "endpoint", "name", "enabled", "revision"]
+    },
+    "ConnectorSettingsList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/ConnectorSettings" } }
+      },
+      "required": ["items"]
+    },
+    "PersonalDiscovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": { "type": "string", "format": "uuid" }
+      },
+      "required": ["operation_id"]
+    },
+    "PersonalExecutionMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run_id": { "type": "string", "format": "uuid" },
+        "execution_id": { "type": "string", "format": "uuid" },
+        "tool_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "args_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "decision_id": { "type": "string", "format": "uuid" },
+        "auth_failed": { "type": "boolean" }
+      },
+      "required": ["run_id", "execution_id", "tool_id", "args_hash"]
+    },
+    "PersonalSecretMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": { "type": "string" },
+        "credential_ref": { "type": "string" },
+        "token": { "type": "string", "minLength": 12, "maxLength": 2048 }
+      },
+      "required": ["endpoint", "credential_ref", "token"]
+    },
     "Skill": {
       "type": "object",
       "additionalProperties": false,
@@ -224,6 +382,10 @@
         },
         "content": {
           "type": "string"
+        },
+        "missing_optional_dependencies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SkillDependency" }
         },
         "revision": {
           "type": "integer",
@@ -241,6 +403,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "fingerprint": { "type": "string" },
+        "display_name": { "type": "string" },
         "namespaced_tool_id": {
           "type": "string"
         },
@@ -267,6 +431,16 @@
           "type": "string",
           "minLength": 0,
           "maxLength": 2000
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write"
+          ]
+        },
+        "requires_approval": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -276,7 +450,9 @@
         "schema_hash",
         "revision",
         "remote_name",
-        "description"
+        "description",
+        "access_mode",
+        "requires_approval"
       ]
     },
     "Mcp": {
@@ -293,16 +469,26 @@
         "credential_ref": {
           "type": "string"
         },
+        "connector_id": { "type": "string" },
+        "credential_version": { "type": "integer", "minimum": 1 },
+        "grant_revision": { "type": "integer", "minimum": 1 },
+        "connector_revision": { "type": "integer", "minimum": 0 },
         "revision": {
           "type": "integer",
           "minimum": 0
+        },
+        "max_calls_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
         }
       },
       "required": [
         "id",
         "endpoint",
         "credential_ref",
-        "revision"
+        "revision",
+        "max_calls_per_minute"
       ]
     },
     "FileRef": {
@@ -513,6 +699,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "connector_ids": { "type": "array", "maxItems": 12, "uniqueItems": true, "items": { "type": "string", "maxLength": 100 } },
         "input": {
           "type": "string",
           "minLength": 1,
@@ -674,6 +861,58 @@
         "text"
       ]
     },
+    "ClarificationOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,40}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "value"
+      ]
+    },
+    "Clarification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ClarificationOption"
+          },
+          "minItems": 2,
+          "maxItems": 3
+        },
+        "allow_custom": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "question",
+        "options",
+        "allow_custom"
+      ]
+    },
     "MessageCompleted": {
       "type": "object",
       "additionalProperties": false,
@@ -687,6 +926,9 @@
         },
         "is_final": {
           "type": "boolean"
+        },
+        "clarification": {
+          "$ref": "#/$defs/Clarification"
         }
       },
       "required": [
@@ -1161,6 +1403,22 @@
         "version": {
           "type": "integer",
           "minimum": 1
+        },
+        "artifact_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "revision_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_thread_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_execution_id": {
+          "type": "string",
+          "format": "uuid"
         }
       },
       "required": [
@@ -1530,6 +1788,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "dependencies": {
+          "type": "array",
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/SkillDependency" }
+        },
         "name": {
           "type": "string",
           "minLength": 1,
@@ -1571,6 +1835,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "dependencies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SkillDependency" }
+        },
         "id": {
           "type": "string",
           "format": "uuid"
@@ -1800,6 +2068,23 @@
         },
         "trusted_read_only": {
           "type": "boolean"
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write",
+            "blocked"
+          ]
+        },
+        "requires_approval": {
+          "type": "boolean"
+        },
+        "server_read_only_hint": {
+          "type": "boolean"
+        },
+        "server_hint_present": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -1812,7 +2097,11 @@
         "description",
         "enabled",
         "available",
-        "trusted_read_only"
+        "trusted_read_only",
+        "access_mode",
+        "requires_approval",
+        "server_read_only_hint",
+        "server_hint_present"
       ]
     },
     "DiscoverRequest": {
@@ -1839,6 +2128,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "provider_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "unsupported_schema": { "type": "boolean" },
         "remote_name": {
           "type": "string",
           "minLength": 1,
@@ -1854,13 +2145,21 @@
         },
         "trusted_read_only": {
           "type": "boolean"
+        },
+        "server_read_only_hint": {
+          "type": "boolean"
+        },
+        "server_hint_present": {
+          "type": "boolean"
         }
       },
       "required": [
         "remote_name",
         "description",
         "input_schema",
-        "trusted_read_only"
+        "trusted_read_only",
+        "server_read_only_hint",
+        "server_hint_present"
       ]
     },
     "DiscoverResult": {
@@ -1884,6 +2183,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "connector_ids": { "type": "array", "maxItems": 12, "uniqueItems": true, "items": { "type": "string", "maxLength": 100 } },
         "model_id": {
           "type": "string",
           "format": "uuid"
@@ -2550,6 +2850,18 @@
         "parent_file_id": {
           "type": "string",
           "format": "uuid"
+        },
+        "execution_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": [
@@ -3045,6 +3357,18 @@
         "parent_file_id": {
           "type": "string",
           "format": "uuid"
+        },
+        "execution_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": [
@@ -3052,6 +3376,169 @@
         "artifact_key",
         "name",
         "media_type"
+      ]
+    },
+    "Artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string"
+        },
+        "current_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "owner_id",
+        "title",
+        "created_at"
+      ]
+    },
+    "ArtifactRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "artifact_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "parent_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "file": {
+          "$ref": "#/$defs/File"
+        },
+        "source_thread_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_run_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_execution_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "READY",
+            "FAILED"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "artifact_id",
+        "version",
+        "file",
+        "status",
+        "created_at"
+      ]
+    },
+    "ArtifactRevisionList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/Artifact"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ArtifactRevision"
+          }
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "artifact",
+        "items",
+        "has_more"
+      ]
+    },
+    "DownloadLocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "presigned",
+            "stream"
+          ]
+        }
+      },
+      "required": [
+        "url",
+        "expires_at",
+        "mode"
+      ]
+    },
+    "CandidateArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5242880
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "name",
+        "media_type",
+        "size",
+        "sha256"
       ]
     }
   }

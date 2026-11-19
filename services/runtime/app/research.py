@@ -94,7 +94,6 @@ class ResearchTools:
             key=os.getenv('TAVILY_API_KEY','')
             fixture=fixture_active(self.start)
             if not key and not fixture:raise RunError('SEARCH_NOT_CONFIGURED')
-            await self.budget('search',eid)
             try:
                 async with httpx.AsyncClient(trust_env=False,follow_redirects=False,timeout=20) as client:
                     r=await client.post('http://web-fixture:8003/search' if fixture else 'https://api.tavily.com/search',headers={} if fixture else {'Authorization':'Bearer '+key},json={'query':safe_text(args['query']),'search_depth':'basic','max_results':args.get('max_results',5),'include_answer':False,'include_raw_content':False,'include_images':False,'auto_parameters':False})
@@ -108,7 +107,6 @@ class ResearchTools:
                     return json.dumps({'query':safe_text(args['query']),'sources':results},ensure_ascii=False)
             except RunError:raise
             except Exception:raise RunError('SOURCE_UNAVAILABLE') from None
-        await self.budget('fetch',eid)
         try:
             if fixture_active(self.start) and fixture_page(args['url']):
                 async with httpx.AsyncClient(trust_env=False,follow_redirects=False,timeout=10) as client:

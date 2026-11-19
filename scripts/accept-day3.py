@@ -39,7 +39,10 @@ def main():
  model=json.loads((d.ROOT/'schemas/examples/model-write.json').read_text());model.update(name='S03 Mock '+d.SUFFIX,provider='display-only',provider_model_name='mock-only',base_url='https://api.deepseek.com',credential_ref='deepseek_primary',is_default=True,enabled=True,context_limit=64000,max_output_tokens=512,revision=0)
  m=req('/admin/models','POST',model,a);mid=m['id']
  conn=req('/admin/mcp-connections','POST',{'name':'S03 real MCP '+d.SUFFIX,'endpoint':'http://demo-mcp:8001/mcp/','credential_ref':'','enabled':True,'revision':0},a)
- cp='/admin/mcp-connections/'+conn['id'];conn=req(cp+'/discover','POST',{'revision':conn['revision']},a);tool=req(cp+'/tools',token=a)['items'][0];req(cp+'/tools/'+tool['namespaced_tool_id'],'PATCH',{'revision':tool['revision'],'enabled':True},a)
+ cp='/admin/mcp-connections/'+conn['id'];conn=req(cp+'/discover','POST',{'revision':conn['revision']},a);tools=req(cp+'/tools',token=a)['items']
+ tool=next(t for t in tools if t['remote_name']=='lookup_demo_order');write_tool=next(t for t in tools if t['remote_name']=='create_demo_note')
+ req(cp+'/tools/'+tool['namespaced_tool_id'],'PATCH',{'revision':tool['revision'],'enabled':True},a)
+ req(cp+'/tools/'+write_tool['namespaced_tool_id'],'PATCH',{'revision':write_tool['revision'],'enabled':True},a)
  def thread():return req('/threads','POST',{'title':'S03 '+d.SUFFIX},u,expect=201)['id']
  def submit(t,text,key=None):return req('/threads/'+t+'/runs','POST',{'input':text,'model_id':mid,'skill_ids':[]},u,key or str(uuid.uuid4()),202)
  tid=thread();key=str(uuid.uuid4());r=submit(tid,'mock:long',key);rid=r['run_id']
@@ -76,6 +79,28 @@ def main():
  toolrun=submit(thread(),'mock:tool');wait(toolrun['run_id'],u);te=all_events(toolrun['run_id'],u);assert any(e['type']=='tool.completed' and 'DEMO-1001' in e['payload']['text'] for e in te)
  assert d.sql("SELECT count(*) FROM runtime_harness_v2.checkpoints WHERE thread_id='"+toolrun['run_id']+"';")!='0'
  passed('A08: Mock model traverses real LangGraph, PostgreSQL checkpoints and real MCP gateway')
+ clarification_run=submit(thread(),'mock:clarification');clarification_state=wait(clarification_run['run_id'],u);clarification_events=all_events(clarification_run['run_id'],u)
+ completed=next(e for e in clarification_events if e['type']=='message.completed' and e['payload']['is_final'])
+ clarification=completed['payload']['clarification']
+ assert clarification_state['final_text']=='请选择希望生成的报告格式。'
+ assert clarification['question']=='报告应采用哪种格式？' and len(clarification['options'])==2 and clarification['allow_custom']
+ assert '```clarification' not in clarification_state['final_text'] and '```clarification' not in completed['payload']['text']
+ passed('Structured clarification is schema-validated, separated from visible text and safe for explicit user choice')
+ write_run=submit(thread(),'mock:mcp-write')
+ end=time.monotonic()+20
+ while time.monotonic()<end:
+  state=req('/runs/'+write_run['run_id'],token=u)
+  if state['status']=='WAITING_APPROVAL':break
+  assert state['status'] not in ('FAILED','CANCELLED','INTERRUPTED'),state;time.sleep(.2)
+ else:raise AssertionError('MCP write did not enter approval wait')
+ approvals=req('/runs/'+write_run['run_id']+'/approvals',token=u)['items'];assert len(approvals)==1
+ approval=approvals[0];assert approval['namespaced_tool_id']==write_tool['namespaced_tool_id'] and approval['status']=='PENDING'
+ args=json.loads(approval['canonical_args']);assert args['subject']=='审批链路验收'
+ req('/approvals/'+approval['approval_id']+'/decision','POST',{'decision':'approve'},u)
+ result=wait(write_run['run_id'],u);events=all_events(write_run['run_id'],u)
+ completed=next(e for e in events if e['type']=='tool.completed')
+ assert 'synthetic' in result['final_text'] and json.loads(completed['payload']['text'])['subject']=='审批链路验收'
+ passed('MCP write is enabled by policy but executes only after a run-scoped, argument-bound approval')
  failed=submit(thread(),'mock:fail');fr=wait(failed['run_id'],u,'FAILED');fe=all_events(failed['run_id'],u);assert fr['error_code']=='MODEL_STREAM_FAILED' and any(e['type']=='message.delta' for e in fe) and not any(e['type']=='message.completed' for e in fe)
  passed('A18: mid-stream failure keeps unfinished drafts and has no successful final message')
  # Four live subscribers; fifth is rejected, configuration APIs remain responsive.

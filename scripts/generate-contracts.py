@@ -20,7 +20,7 @@ for name,s in schema['$defs'].items():
   out['ts']+='  '+k+('?' if optional else '')+': '+field(v,'ts')+';\n'
  out['go']+='}\n';out['py']+='\n';out['ts']+='}\n'
 for lang,path in [('go','services/backend/internal/contracts/models.go'),('py','services/runtime/contracts/models.py'),('ts','apps/web/src/contracts/models.ts')]:
- (ROOT/path).write_text(out[lang],encoding='utf-8')
+ (ROOT/path).write_text(out[lang].rstrip()+'\n',encoding='utf-8')
 for path in ['services/backend/internal/contracts/schema.json','services/runtime/contracts/schema.json','apps/web/src/contracts/schema.json']:
  (ROOT/path).write_text(json.dumps(schema,ensure_ascii=False,indent=2),encoding='utf-8')
 

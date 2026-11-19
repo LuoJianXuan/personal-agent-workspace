@@ -17,3 +17,6 @@ INSERT INTO runtime.schema_migrations(version) VALUES(4) ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS runtime.cancellations(run_id uuid PRIMARY KEY,command_id uuid NOT NULL);
 ALTER TABLE runtime.tool_executions ADD COLUMN IF NOT EXISTS tool_name text NOT NULL DEFAULT '';
 ALTER TABLE runtime.tool_executions ADD COLUMN IF NOT EXISTS decision_id uuid;
+ALTER TABLE runtime.tool_executions ADD COLUMN IF NOT EXISTS connection_id uuid;
+ALTER TABLE runtime.tool_executions ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+CREATE INDEX IF NOT EXISTS tool_executions_connection_created_idx ON runtime.tool_executions(connection_id,created_at) WHERE connection_id IS NOT NULL;

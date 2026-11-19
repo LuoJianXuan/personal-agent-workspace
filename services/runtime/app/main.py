@@ -60,7 +60,30 @@ async def ready(request: Request):
 
 
 from contracts.validate import validate
-from .access import configuration_status, discover
+from .access import configuration_status, discover, discover_personal
+from .errors import RunError
+from .personal_mcp import material
+
+@app.post("/internal/mcp/personal-discover")
+async def personal_discover_endpoint(request: Request):
+    try:
+        if len(await request.body()) > 4096:
+            raise ValueError()
+        payload = await request.json()
+        validate("PersonalDiscovery", payload)
+        secret = await material(request.app.state.engine, "discovery", payload)
+        result = await discover_personal(secret)
+        if result.get("error"):
+            raise RunError(result["error"])
+        validate("DiscoverResult", result)
+        return result
+    except Exception as error:
+        code = "MCP_UNAVAILABLE"
+        if isinstance(error, TimeoutError):
+            code = "TOOL_TIMEOUT"
+        if isinstance(error, RunError) and error.code == "CONNECTION_AUTH_REQUIRED":
+            code = error.code
+        return JSONResponse({"code": code, "message": "Connection probe failed", "request_id": request.state.request_id}, status_code=502)
 
 @app.get("/internal/configuration/status")
 async def config_status():

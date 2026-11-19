@@ -1,4 +1,4 @@
-import asyncio,hashlib,json,os,time
+import asyncio,hashlib,json,os,re,time
 from datetime import datetime,timezone
 from uuid import uuid4
 import httpx
@@ -11,6 +11,19 @@ from contracts.validate import validate
 from .models import RunError,safe_text,budget_window
 
 TERMINAL={'SUCCEEDED','FAILED','CANCELLED','INTERRUPTED'}
+CLARIFICATION_RE=re.compile(r'\n?```clarification\s*(\{.*?\})\s*```\s*$',re.DOTALL)
+
+def split_clarification(text):
+    """Turn the optional final fenced payload into a validated UI projection."""
+    match=CLARIFICATION_RE.search(text)
+    if not match:return text,None
+    try:
+        value=json.loads(match.group(1));validate('Clarification',value)
+    except Exception:
+        return text,None
+    visible=text[:match.start()].rstrip() or value['question']
+    return visible,value
+
 class Engine:
     def __init__(self,pool,checkpoint_pool):
         self.pool=pool;self.checkpoint_pool=checkpoint_pool;self.tasks=[];self.streams=0;self.active={};self.approvals=ApprovalService(self)
@@ -118,7 +131,7 @@ class Engine:
     async def event(self,run,kind,payload):
         async with self.pool.connection() as conn:
             async with conn.transaction():await self.event_on(conn,run,kind,payload)
-    async def finish(self,run,status,code='',text='',message_id=None):
+    async def finish(self,run,status,code='',text='',message_id=None,clarification=None):
         # Cancellation is durable in Backend before its asynchronous command reaches Runtime.
         # Reconcile it before terminalization, including after a process restart.
         backend_cancel=False
@@ -136,7 +149,10 @@ class Engine:
                 row=await (await conn.execute("UPDATE runtime.runs SET status=%s,error_code=%s,final_text=%s WHERE run_id=%s AND status IN ('QUEUED','RUNNING','WAITING_APPROVAL') RETURNING run_id",(status,code,text,run))).fetchone()
                 if not row:return
                 await conn.execute("UPDATE runtime.approvals SET status='CANCELLED' WHERE run_id=%s AND status='PENDING'",(run,))
-                if message_id:await self.event_on(conn,run,'message.completed',{'message_id':message_id,'text':text,'is_final':True})
+                if message_id:
+                    payload={'message_id':message_id,'text':text,'is_final':True}
+                    if clarification:payload['clarification']=clarification
+                    await self.event_on(conn,run,'message.completed',payload)
                 kind={'SUCCEEDED':'run.completed','FAILED':'run.failed','INTERRUPTED':'run.interrupted','CANCELLED':'run.cancelled'}[status]
                 await self.event_on(conn,run,kind,{'status':status,'code':code})
     async def events(self,run,seq):
@@ -244,4 +260,5 @@ class Engine:
             if final.response_metadata.get('finish_reason') in ('length','content_filter'):raise RunError('MODEL_STREAM_INCOMPLETE')
             text=final.content if isinstance(final.content,str) else ''.join(b.get('text','') for b in final.content if isinstance(b,dict) and b.get('type')=='text')
             if not text.strip():raise RunError('MODEL_EMPTY_RESPONSE')
-            await self.finish(run,'SUCCEEDED',text=safe_text(text),message_id=bridge.final_id(final))
+            visible,clarification=split_clarification(safe_text(text))
+            await self.finish(run,'SUCCEEDED',text=visible,message_id=bridge.final_id(final),clarification=clarification)

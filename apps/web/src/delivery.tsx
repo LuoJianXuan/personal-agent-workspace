@@ -93,20 +93,45 @@ export function FilePicker({ value, onChange, disabled, compact = false }: { val
 }
 export function RunPanel({ id, onStatus, artifactsTarget }: { id: string; onStatus: (r: Submission) => void; artifactsTarget?: HTMLElement | null }) {
   const [run, setRun] = useState<Submission>(), [approvals, setApprovals] = useState<Approval[]>([]), [files, setFiles] = useState<StoredFile[]>([]), [error, setError] = useState(""), [busy, setBusy] = useState(false), [preview, setPreview] = useState<StoredFile>();
+  const [pollError, setPollError] = useState("");
   useEffect(() => {
-    let live = true; let timer: ReturnType<typeof setTimeout>; setApprovals([]); setFiles([]); setRun(undefined); setError("");
-    const poll = async () => { try { const r = await api<Submission>(`/runs/${id}`); if (!live) return; setRun(r); onStatus(r);
-      if(r.status==='PENDING'||r.status==='QUEUED'){setError('');return;}
-      const [a, f] = await Promise.all([api<{ items: Approval[] }>(`/runs/${id}/approvals`), api<FileList>(`/runs/${id}/artifacts`)]);
-      if (live) { setApprovals(a.items); setFiles(f.items); setError(previous => ["NOT_FOUND", "RUNTIME_UNAVAILABLE", "连接失败，请检查网络后重试"].includes(previous) ? "" : previous); }
-    } catch (e) { if (live) setError(message(e)); } finally { if (live) timer = setTimeout(poll, 2000); } }; void poll();
+    let live = true;
+    let timer: ReturnType<typeof setTimeout>;
+    setApprovals([]);
+    setFiles([]);
+    setRun(undefined);
+    setError("");
+    setPollError("");
+    const poll = async () => {
+      try {
+        const r = await api<Submission>(`/runs/${id}`);
+        if (!live) return;
+        setRun(r);
+        onStatus(r);
+        if (r.status !== "PENDING" && r.status !== "QUEUED") {
+          const [approvalList, artifactList] = await Promise.all([
+            api<{ items: Approval[] }>(`/runs/${id}/approvals`),
+            api<FileList>(`/runs/${id}/artifacts`),
+          ]);
+          if (!live) return;
+          setApprovals(approvalList.items);
+          setFiles(artifactList.items);
+        }
+        setPollError("");
+      } catch (e) {
+        if (live) setPollError(message(e));
+      } finally {
+        if (live) timer = setTimeout(poll, 2000);
+      }
+    };
+    void poll();
     return () => { live = false; clearTimeout(timer); };
   }, [id, onStatus]);
   async function act(path: string, body?: unknown) { setBusy(true); setError(""); try { await api(path, { method: "POST", ...(body ? { body: JSON.stringify(body) } : {}) }); } catch (e) { setError(message(e)); } finally { setBusy(false); } }
   const artifacts = files.length > 0 ? <div className="artifact-files"><List dataSource={files} renderItem={f => <List.Item><div className="file-row"><div className="artifact-file-name"><Icon name="library" /><strong>{f.name}</strong></div><FileActions file={f} preview={setPreview} fail={setError} /></div></List.Item>} />{files.filter(f => f.media_type === "application/json").map(f => <FilePreview key={f.id} file={f} />)}</div> : <div className="artifact-empty"><Icon name="library" size={44} /><h3>还没有产物</h3><p>{run?.status === "SUCCEEDED" ? "可以导出本轮报告，或继续对话生成文件。" : "本轮生成的报告与图表将显示在这里。"}</p></div>;
-  return <div className="run-panel">{error && <Alert type="warning" message={error} closable onClose={() => setError("")} />}
-    {approvals.map(a => <Card key={a.approval_id} size="small" className="approval-card" title="创建演示工单 · 需要你的决定" extra={<Tag color={a.status === "PENDING" ? "orange" : "default"}>{a.status}</Tag>}>
-      <Typography.Paragraph>以下完整参数将写入演示工单。批准只适用于本次执行，参数不能修改。</Typography.Paragraph><pre className="file-preview">{JSON.stringify(JSON.parse(a.canonical_args), null, 2)}</pre>
+  return <div className="run-panel">{(error || pollError) && <Alert type="warning" message={error || pollError} closable onClose={() => error ? setError("") : setPollError("")} />}
+    {approvals.map(a => <Card key={a.approval_id} size="small" className="approval-card" title={`${a.namespaced_tool_id} · 需要你的决定`} extra={<Tag color={a.status === "PENDING" ? "orange" : "default"}>{a.status}</Tag>}>
+      <Typography.Paragraph>以下完整参数将提交给写工具。批准只适用于本次执行和这组参数，不能被复用于其他调用。</Typography.Paragraph><pre className="file-preview">{JSON.stringify(JSON.parse(a.canonical_args), null, 2)}</pre>
       <Typography.Paragraph type="secondary">有效期至 {new Date(a.expires_at).toLocaleString()} · 能力版本 {a.capability_revision}</Typography.Paragraph>
       <Collapse items={[{ key: "binding", label: "查看审批绑定信息", children: <pre className="file-preview">{JSON.stringify({ approval_id: a.approval_id, execution_id: a.execution_id, run_id: a.run_id, snapshot_id: a.snapshot_id, args_hash: a.args_hash }, null, 2)}</pre> }]} />
       {a.status === "PENDING" && run?.status === "WAITING_APPROVAL" && <Space><Button type="primary" loading={busy} disabled={Date.parse(a.expires_at) <= Date.now()} onClick={() => act(`/approvals/${a.approval_id}/decision`, { decision: "approve" })}>批准并继续</Button><Button danger loading={busy} onClick={() => act(`/approvals/${a.approval_id}/decision`, { decision: "reject" })}>拒绝</Button></Space>}

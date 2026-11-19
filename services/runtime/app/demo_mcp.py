@@ -15,6 +15,11 @@ def lookup_demo_order(order_id: str) -> str:
     item = orders.get(order_id)
     return json.dumps({"found":item is not None,"order_id":order_id,"order":item,"synthetic":True})
 
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True))
+def create_demo_note(subject: str, content: str) -> str:
+    """Create a synthetic note for approval-flow acceptance; no external system is changed."""
+    return json.dumps({"created":True,"subject":subject,"content":content,"synthetic":True})
+
 @mcp.custom_route("/health", methods=["GET"])
 async def health(request):
     return JSONResponse({"status":"ready","data":"synthetic"})

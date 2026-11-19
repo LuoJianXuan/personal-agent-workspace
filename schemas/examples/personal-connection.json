@@ -1,0 +1,13 @@
+{
+  "connector_id": "mcd-cn",
+  "name": "麦当劳中国",
+  "connection_id": "f2b02dba-40b0-4f1c-8c35-f2313c42de50",
+  "revision": 2,
+  "status": "ready",
+  "catalog_hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "pending": false,
+  "tools": [
+    {"name": "campaign-calendar", "policy": "read", "granted": true},
+    {"name": "create-order", "policy": "confirm", "granted": false}
+  ]
+}

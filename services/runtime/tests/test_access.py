@@ -7,15 +7,19 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from app.access import configuration_status, run_worker, safe_client, target
+from app.access import configuration_status, run_worker, safe_client, target, tool_access
 
 class AccessBoundaryTests(unittest.IsolatedAsyncioTestCase):
     async def test_target_and_alias_are_bound(self):
-        fixture={'mcp':[{'endpoint':'http://demo-mcp:8001/mcp/','credential_ref':'','read_only_tools':['lookup_demo_order']}],'models':[]}
+        fixture={'mcp':[{'endpoint':'http://demo-mcp:8001/mcp/','credential_ref':'','read_only_tools':['lookup_demo_order'],'approval_required_tools':['create_demo_note']}],'models':[]}
         with patch('app.access.policy',return_value=fixture):
             for endpoint,alias in [('http://169.254.169.254/',''),('http://demo-mcp:8001/mcp/?x=1',''),('http://demo-mcp:8001/mcp/','unrelated'),('https://api.deepseek.com.evil.invalid','deepseek_primary')]:
                 with self.assertRaises(ValueError):target('mcp',endpoint,alias)
             self.assertEqual(target('mcp','http://demo-mcp:8001/mcp/','')['read_only_tools'],['lookup_demo_order'])
+            item=target('mcp','http://demo-mcp:8001/mcp/','')
+            self.assertEqual(tool_access(item,'lookup_demo_order'),('read',False))
+            self.assertEqual(tool_access(item,'create_demo_note'),('write',True))
+            self.assertEqual(tool_access(item,'unknown'),('blocked',False))
 
     async def test_credential_presence_without_model_request(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -50,5 +54,15 @@ class AccessBoundaryTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(TimeoutError):
             await run_worker({}, command=[sys.executable,'-c','import time; time.sleep(60)'], deadline=0.5)
         self.assertLess(time.monotonic()-start,3)
+
+    async def test_completed_result_does_not_wait_for_transport_cleanup(self):
+        start=time.monotonic()
+        result=await run_worker(
+            {'request':'fixture'},
+            command=[sys.executable,'-c',"import json,sys,time;json.load(sys.stdin);print(json.dumps({'tools':[]}),flush=True);time.sleep(60)"],
+            deadline=1,
+        )
+        self.assertEqual(result,{'tools':[]})
+        self.assertLess(time.monotonic()-start,2)
 
 if __name__=='__main__':unittest.main(verbosity=2)

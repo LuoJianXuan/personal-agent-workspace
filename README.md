@@ -1,8 +1,12 @@
 # 序光 · Agent Workspace
 
+工具栏目更新：用户在「工具 → MCP」安装并授权自己的麦当劳账户，在「工具 → 技能」启用方法与输出模板。平台模型、搜索和公共工具继续由管理员配置。新界面的实施与验收状态见 [工具目录改造](docs/evidence/TC-RELEASE.md)。2026-11-16 已完成新界面浏览器核心业务、真实 DeepSeek 活动查询与 Langfuse 入库、完整 Mock 回归；发现问题的修复及验收边界见 [本轮验收报告](docs/evidence/TC-VERIFY.md)。
+
+2026-11-07 开发更新：新增可替换 BlobStore（LocalFS / S3-MinIO）、产物与不可变 revision、私有临时下载、进程内 Tool Gateway 模块拆分和 Local Docker SandboxExecutor。LocalFS、真实 MinIO、迁移 007、完整 Mock 业务回归和真实 Docker 沙箱均已验收；正式栈已更新并运行于 `http://localhost:5173`，当前默认存储仍为 LocalFS。浏览器视觉与新增真实模型/搜索调用不属于本次验收。见 [配置与升级说明](docs/portable-artifacts-guide.md)、[任务清单](openspec/changes/portable-artifacts-and-sandbox-execution/tasks.md) 和 [当前证据](docs/evidence/ACC-01.md)。
+
 2026-11-06 实施更新：项目目标固定为 **Personal Agent**。S16–S20 已完成代码和本地隔离验收；真实 DeepSeek 已通过 DOCX 按需读取、MCP 工具循环与专用 `Personal Agent Demo` Langfuse 调用树验收。文档改为 Runtime 内按需受控解析，默认部署不再需要独立 document-worker；内置文档技能按需读取，Langfuse 仅观测 Agent/模型/工具。最终状态见 [优化方案](docs/plan-v3/PERSONAL-AGENT-OPTIMIZATION.md) 与 [S16–S20 证据](docs/evidence/)。
 
-独立个人 Agent 工作区。Day 1–7 功能已接入：通用聊天、协议化模型管理、技能、真实只读 MCP、审批恢复、取消、资料库、CSV 图表与报告下载。验收状态以 [验收报告](docs/acceptance-report.md) 和 [各阶段证据](docs/evidence/) 为准。
+独立个人 Agent 工作区。Day 1–7 功能已接入：通用聊天、协议化模型管理、技能、分级 MCP、逐次审批恢复、取消、资料库、CSV 图表与报告下载。2026-11-07 已完成 MCP 1.1 与工作台交互基线：真实麦当劳 Streamable HTTP 发现/只读调用通过，写工具进入通用审批，未知工具默认阻断。验收状态以 [验收报告](docs/acceptance-report.md) 和 [各阶段证据](docs/evidence/) 为准。
 
 2026-11-06：第一阶段 S08–S20 采用实际 DeepAgents，补充网页研究、PDF/DOCX/XLSX、工作文件/报告版本、上下文管理、按需文档技能和 Agent 级追踪。**本地隔离业务/故障/浏览器/真实 Docker 计算、真实 DeepSeek 工具链及 Tavily→公网正文→引用报告均验收通过，当前版本已切换到 `http://localhost:5173`。** 用户确认演示数据无需备份，备份/回滚脚本和产物未保留。见 [本次验收](docs/phase1-acceptance-2026-11-06.md) 与 [架构说明](ARCHITECTURE.md)。
 
@@ -13,7 +17,8 @@
 ```powershell
 # 项目根目录；首次生成随机秘密，拒绝覆盖现有 .env
 .\scripts\init-env.ps1
-# 如需真实模型，在启动进程中设置 DEEPSEEK_API_KEY，避免写入源码
+# 如需真实模型，在本机被忽略的 .env 中设置 DEEPSEEK_API_KEY、
+# REAL_CALL_BUDGET、REAL_CALL_BUDGET_SINCE 与 REAL_MAX_OUTPUT_TOKENS
 .\scripts\dev.ps1
 ```
 
@@ -24,6 +29,14 @@
 Windows 脚本会查找 PATH 中 docker 或 Docker Desktop 默认安装位置。若 Docker Hub 不可达，可在本项目 .env 设置 DOCKER_REGISTRY；不是全局 Docker 设置。
 
 ## 页面
+
+### 个人连接
+
+平台模型、搜索和公共 MCP 继续在管理端配置。麦当劳中国在「工具 → MCP」提供个人安装，用户填写自己的 Token，验证工具清单并明确确认授权范围。对话顶部 MCP 面板可选择本轮连接，也可原地安装和管理，保留当前草稿。查询可直接执行，写操作和风险未核实的工具需要逐次确认。工具页“去使用”只填写草稿并选择能力，发送时才创建运行。
+
+首次启用请在项目目录执行 `./scripts/init-connection-secret.ps1`，然后启动或重建项目。该脚本只为当前部署生成加密主密钥，并保存到已被 Git 忽略的环境配置。隔离验证使用 `-Verification`。已配置的密钥需要随部署保留。轮换时将旧密钥保留在密钥环，切换 active key ID 后通过刷新并重新确认授权来更新既有密文，确认更新完成后退役旧密钥。
+
+「管理控制台 → MCP」可以发布或隐藏部署已准入的个人连接器，编辑名称、简介、分类、图标和 Token 获取链接。服务地址、认证类型和工具风险来自部署准入配置。个人 Token 独立存储，迁移不会把此前的共享麦当劳 Token 分给任何用户。模型与环境状态位于「设置」，能力组合检查收进高级诊断；旧技能与能力设置地址兼容跳转到工具页。
 
 - `/app/chat`：会话、模型/技能/资料选择、流式消息、工具结果、审批卡、取消和产物。
 - `/app/library`：上传、搜索、预览、下载和引用资料。
@@ -38,7 +51,7 @@ React 只展示与发起操作。Go Backend 保存用户、配置、提交/决�
 
 根目录的 `compose.yaml` 是唯一正式运行栈。`tests/compose/` 只保存有明确用途的隔离验收覆盖层：测试端口、隔离镜像、Mock 模型、故障注入、网页夹具和真实调用预算；不得将这些覆盖层用于日常环境。仓库使用 Gitleaks 扫描完整提交历史，真实凭据只能通过本机被忽略的 `.env` 或启动进程环境注入。
 
-`deploy/targets.json` 是确切地址/路径与凭据别名准入表，不含 Key。模型按协议配置，首选 DeepSeek；平台标签不决定适配器。真实 Key 仅注入 Runtime。网页配置检查只验证声明与部署状态，不执行付费探测。MCP 发现的工具默认禁用，管理员明确启用后进入快照。
+`deploy/targets.json` 是确切地址/路径、凭据别名、MCP 工具分类与速率的准入表，不含 Key。模型按协议配置，首选 DeepSeek；平台标签不决定适配器。真实 Key 仅注入 Runtime。网页配置检查只验证声明与部署状态，不执行付费探测。MCP 发现的工具默认禁用；只读工具可明确启用，写工具即使启用也必须逐次审批，未列工具保持阻断。
 
 工具链：Node 22 / pnpm 11.25.0、Go 1.25、Python 3.13 / uv 0.8.10；依赖锁文件齐全。`make install` 安装本地依赖，`python scripts/generate-contracts.py` 生成 Go/Python/TS 契约。共享源在 schemas/，不要手改生成副本。`pnpm dev` 是前端单独开发模式，需要本机 Backend :8080；完整运行推荐 Compose。
 

@@ -16,8 +16,52 @@
       "endpoint": "http://demo-mcp:8001/mcp/",
       "credential_ref": "",
       "env_var": "",
+      "max_calls_per_minute": 60,
       "read_only_tools": [
         "lookup_demo_order"
+      ],
+      "approval_required_tools": [
+        "create_demo_note"
+      ]
+    },
+    {
+      "endpoint": "https://mcp.mcd.cn",
+      "credential_ref": "mcd_mcp_token",
+      "personal_connector": "mcd-cn",
+      "connector_name": "麦当劳中国",
+      "presentation": {
+        "description": "查询近期活动、餐品与优惠券，让助手连接你的麦当劳日常。",
+        "category": "生活服务",
+        "icon": "mcd",
+        "token_help_url": "https://open.mcd.cn/mcp"
+      },
+      "blocked_tools": ["draw-lottery", "cancel-order", "party-order-create"],
+      "env_var": "MCD_MCP_TOKEN",
+      "max_calls_per_minute": 30,
+      "read_only_tools": [
+        "list-nutrition-foods",
+        "delivery-query-addresses",
+        "delivery-query-stores",
+        "query-meal-assistance",
+        "query-nearby-stores",
+        "query-store-coupons",
+        "query-meals",
+        "query-meal-detail",
+        "calculate-price",
+        "query-order",
+        "campaign-calendar",
+        "available-coupons",
+        "query-my-coupons",
+        "query-my-account",
+        "mall-points-products",
+        "mall-product-detail",
+        "now-time-info"
+      ],
+      "approval_required_tools": [
+        "delivery-create-address",
+        "create-order",
+        "auto-bind-coupons",
+        "mall-create-order"
       ]
     }
   ]

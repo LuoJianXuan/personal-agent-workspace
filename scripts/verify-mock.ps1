@@ -43,7 +43,7 @@ try {
   python -X utf8 "scripts/$test"
   if ($LASTEXITCODE -ne 0) { throw "Acceptance failed: $test" }
  }
- foreach ($test in @('test_access.py','test_models.py','test_materials.py','test_phase1.py')) {
+ foreach ($test in @('test_access.py','test_models.py','test_model_tool_names.py','test_materials.py','test_phase1.py')) {
   Get-Content "services/runtime/tests/$test" -Raw -Encoding utf8 | & $workspaceDocker compose --env-file $testEnvironment -p $testProject -f compose.yaml -f tests/compose/postgres-port.yaml -f tests/compose/isolated-stack.yaml -f tests/compose/mock-model.yaml exec -T runtime python -
   if ($LASTEXITCODE -ne 0) { throw "Runtime test failed: $test" }
  }

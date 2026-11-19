@@ -130,9 +130,17 @@ func audit(tx *gorm.DB, c *gin.Context, action, id string, changes object) error
 }
 
 type policyEntry struct {
-	Endpoint      string   `json:"endpoint"`
-	CredentialRef string   `json:"credential_ref"`
-	ReadOnlyTools []string `json:"read_only_tools"`
+	Endpoint              string                          `json:"endpoint"`
+	CredentialRef         string                          `json:"credential_ref"`
+	PersonalConnector     string                          `json:"personal_connector"`
+	ConnectorName         string                          `json:"connector_name"`
+	Presentation          contracts.ConnectorPresentation `json:"presentation"`
+	BlockedTools          []string                        `json:"blocked_tools"`
+	ReadOnlyTools         []string                        `json:"read_only_tools"`
+	ApprovalRequiredTools []string                        `json:"approval_required_tools"`
+	MaxCallsPerMinute     int64                           `json:"max_calls_per_minute"`
+	Published             bool                            `json:"-"`
+	PublicationRevision   int64                           `json:"-"`
 }
 
 func policy() (map[string][]policyEntry, error) {
@@ -150,27 +158,48 @@ func allowed(kind, endpoint, credential string) bool {
 		return false
 	}
 	for _, v := range p[kind] {
-		if v.Endpoint == endpoint && v.CredentialRef == credential {
+		if v.Endpoint == endpoint && v.CredentialRef == credential && v.PersonalConnector == "" {
 			return true
 		}
 	}
 	return false
 }
 func trusted(endpoint, credential, name string) bool {
+	mode, _, _, ok := toolPolicy(endpoint, credential, name)
+	return ok && mode == "read"
+}
+func toolPolicy(endpoint, credential, name string) (string, bool, int64, bool) {
 	p, e := policy()
 	if e != nil {
-		return false
+		return "blocked", false, 0, false
 	}
 	for _, v := range p["mcp"] {
 		if v.Endpoint == endpoint && v.CredentialRef == credential {
 			for _, n := range v.ReadOnlyTools {
 				if n == name {
-					return true
+					return "read", false, v.MaxCallsPerMinute, true
+				}
+			}
+			for _, n := range v.ApprovalRequiredTools {
+				if n == name {
+					return "write", true, v.MaxCallsPerMinute, true
 				}
 			}
 		}
 	}
-	return false
+	return "blocked", false, 0, false
+}
+func mcpLimit(endpoint, credential string) int64 {
+	p, e := policy()
+	if e != nil {
+		return 0
+	}
+	for _, v := range p["mcp"] {
+		if v.Endpoint == endpoint && v.CredentialRef == credential {
+			return v.MaxCallsPerMinute
+		}
+	}
+	return 0
 }
 func (s *Service) runtime(ctx context.Context, path string, input any, output any) error {
 	var data io.Reader
@@ -187,13 +216,27 @@ func (s *Service) runtime(ctx context.Context, path string, input any, output an
 	}
 	req.Header.Set("Authorization", "Bearer "+s.Config.BToR)
 	req.Header.Set("Content-Type", "application/json")
-	client := http.Client{Timeout: 9 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	timeout := 9 * time.Second
+	if path == "/internal/mcp/discover" || path == "/internal/mcp/personal-discover" {
+		timeout = 15 * time.Second
+	}
+	client := http.Client{Timeout: timeout, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
 	res, e := client.Do(req)
 	if e != nil {
 		return e
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
+		if path == "/internal/mcp/personal-discover" {
+			var safe struct{ Code string }
+			_ = json.NewDecoder(io.LimitReader(res.Body, 4096)).Decode(&safe)
+			if safe.Code == "CONNECTION_AUTH_REQUIRED" {
+				return connectionError(safe.Code, "Token 被麦当劳拒绝，请检查或更换")
+			}
+			if safe.Code == "TOOL_TIMEOUT" {
+				return connectionError(safe.Code, "连接验证超时，请稍后重试")
+			}
+		}
 		return fmt.Errorf("runtime unavailable")
 	}
 	raw, e := io.ReadAll(io.LimitReader(res.Body, 262145))
@@ -277,6 +320,24 @@ func (s *Service) SaveResource(kind, schema string) gin.HandlerFunc {
 		v, ok := body(c, schema)
 		if !ok {
 			return
+		}
+		if kind == "skills" {
+			if deps, ok := v["dependencies"].([]any); ok {
+				for _, raw := range deps {
+					dep := raw.(map[string]any)
+					id := str(dep, "capability_id")
+					if str(dep, "kind") == "connector" {
+						if _, err := personalDefinition(id); err == nil {
+							continue
+						}
+					} else if dependencyReady(contracts.SkillDependency{Kind: "builtin", CapabilityId: id}, nil,
+						object{"fetch_available": true, "search_available": true, "compute_available": true}, true) {
+						continue
+					}
+					fail(c, invalid("技能依赖了未知的能力"))
+					return
+				}
+			}
 		}
 		id := c.Param("id")
 		create := id == ""

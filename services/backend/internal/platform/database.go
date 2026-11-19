@@ -27,6 +27,18 @@ var phase1Migration string
 //go:embed migrations/006_personal_agent.sql
 var personalAgentMigration string
 
+//go:embed migrations/007_portable_artifacts.sql
+var portableArtifactsMigration string
+
+//go:embed migrations/008_personal_connections.sql
+var personalConnectionsMigration string
+
+//go:embed migrations/009_connector_publication.sql
+var connectorPublicationMigration string
+
+//go:embed migrations/010_connector_presentation.sql
+var connectorPresentationMigration string
+
 func Open(dsn string) (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 }
@@ -81,15 +93,47 @@ func Migrate(db *gorm.DB) error {
 			return err
 		}
 		if count == 0 {
-			return tx.Exec(personalAgentMigration).Error
+			if err := tx.Exec(personalAgentMigration).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Raw("SELECT count(*) FROM backend.schema_migrations WHERE version=7").Scan(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			if err := tx.Exec(portableArtifactsMigration).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Raw("SELECT count(*) FROM backend.schema_migrations WHERE version=8").Scan(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			if err := tx.Exec(personalConnectionsMigration).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Raw("SELECT count(*) FROM backend.schema_migrations WHERE version=9").Scan(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			if err := tx.Exec(connectorPublicationMigration).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Raw("SELECT count(*) FROM backend.schema_migrations WHERE version=10").Scan(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			return tx.Exec(connectorPresentationMigration).Error
 		}
 		return nil
 	})
 }
 func Ready(ctx context.Context, db *gorm.DB) error {
 	var n int
-	err := db.WithContext(ctx).Raw("SELECT count(*) FROM backend.schema_migrations WHERE version IN (1,2,3,4,5,6)").Scan(&n).Error
-	if err != nil || n != 6 {
+	err := db.WithContext(ctx).Raw("SELECT count(*) FROM backend.schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10)").Scan(&n).Error
+	if err != nil || n != 10 {
 		return fmt.Errorf("database or migration unavailable")
 	}
 	return nil

@@ -1,0 +1,11 @@
+{
+  "personal": {
+    "connector_id": "mcd-cn", "name": "麦当劳中国", "revision": 0,
+    "status": "disconnected", "catalog_hash": "", "pending": false, "tools": [],
+    "presentation": {
+      "description": "查询活动、餐品与个人优惠券。账户操作需执行前确认。",
+      "category": "生活服务", "icon": "mcd", "token_help_url": "https://open.mcd.cn/mcp"
+    }
+  },
+  "platform": { "items": [] }
+}

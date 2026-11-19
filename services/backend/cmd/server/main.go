@@ -2,6 +2,7 @@ package main
 
 import (
 	"agentworkspace/backend/internal/agententry"
+	"agentworkspace/backend/internal/blobstore"
 	"agentworkspace/backend/internal/control"
 	"agentworkspace/backend/internal/platform"
 	"context"
@@ -80,22 +81,46 @@ func main() {
 	admin.POST("/mcp-connections/:id/discover", s.Discover)
 	admin.GET("/mcp-connections/:id/tools", s.Tools)
 	admin.PATCH("/mcp-connections/:id/tools/:tool_id", s.SetTool)
+	admin.GET("/connector-definitions", s.ConnectorSettings)
+	admin.PATCH("/connector-definitions/:connector", s.UpdateConnectorSettings)
 	api.GET("/catalog/models", s.CatalogModels)
 	api.GET("/catalog/skills", s.CatalogSkills)
 	api.GET("/catalog/tools", s.CatalogTools)
+	api.GET("/catalog/mcp-services", s.CatalogMcpServices)
+	api.GET("/catalog/connectors", s.PersonalConnections)
+	api.GET("/me/connections", s.PersonalConnections)
+	api.GET("/me/connections/:connector", s.PersonalConnection)
+	api.POST("/me/connections/:connector/probe", s.ProbePersonalConnection)
+	api.PUT("/me/connections/:connector/grant", s.GrantPersonalConnection)
+	api.POST("/me/connections/:connector/discard", s.DiscardPersonalProbe)
+	api.DELETE("/me/connections/:connector", s.RevokePersonalConnection)
 	api.PUT("/me/skills/:id/enablement", s.Preference)
 	api.POST("/capabilities/resolve", s.Resolve)
 
 	runs := agententry.New(db, &s)
+	runs.Blobs, err = blobstore.NewFromEnv()
+	if err != nil {
+		log.Fatal("invalid blob storage configuration")
+	}
+	storageContext, storageCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	storageErr := runs.Blobs.Ready(storageContext)
+	storageCancel()
+	if storageErr != nil {
+		log.Print("blob storage unavailable; publication will fail until restored")
+	}
 	go runs.CleanupFiles()
 	workerContext, stopWorker := context.WithCancel(context.Background())
 	defer stopWorker()
+	go runs.CleanupBlobs(workerContext)
 	go runs.Worker(workerContext)
+	go s.CleanupPersonalProbes(workerContext)
 	api.GET("/files", runs.Files)
 	api.POST("/files", runs.Upload)
 	api.GET("/files/:id", runs.File)
 	api.GET("/files/:id/content", runs.FileContent)
 	api.GET("/files/:id/download", runs.Download)
+	api.GET("/files/:id/download-location", runs.DownloadLocation)
+	api.GET("/artifacts/:id/revisions", runs.ArtifactRevisions)
 	api.GET("/files/:id/parsed", runs.ParsedFile)
 	api.POST("/files/:id/extract", runs.ExtractFile)
 	api.GET("/files/:id/versions", runs.FileVersions)
@@ -129,6 +154,8 @@ func main() {
 		c.Next()
 	})
 	internal.POST("/capabilities/validate", s.ValidateCapabilities)
+	internal.POST("/personal-mcp/discovery-material", s.PersonalDiscoveryMaterial)
+	internal.POST("/personal-mcp/execution-material", s.PersonalExecutionMaterial)
 	internal.GET("/submissions/:id", runs.InternalSubmission)
 	internal.GET("/approval-decisions/:id", runs.InternalDecision)
 	internal.POST("/demo-tickets", runs.Ticket)

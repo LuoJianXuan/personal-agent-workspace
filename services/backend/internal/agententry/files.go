@@ -1,8 +1,10 @@
 package agententry
 
 import (
+	"agentworkspace/backend/internal/blobstore"
 	"agentworkspace/backend/internal/contracts"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
@@ -12,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -26,12 +29,14 @@ const maxFileBytes = 5 * 1024 * 1024
 func fileRoot() string { return os.Getenv("FILE_ROOT") }
 
 type fileRow struct {
-	ID, OwnerID string
-	RunID       *string
-	ArtifactKey *string
-	Data        json.RawMessage
-	StorageKey  string
-	CreatedAt   time.Time
+	ID, OwnerID     string
+	RunID           *string
+	ArtifactKey     *string
+	Data            json.RawMessage
+	StorageKey      string
+	StorageProvider string
+	Status          string
+	CreatedAt       time.Time
 }
 
 func (fileRow) TableName() string { return "backend.files" }
@@ -90,7 +95,7 @@ func inspectMaterial(data []byte, media string) ([]string, error) {
 	}
 	return header, nil
 }
-func (s *Service) storeFile(owner string, run *string, key *string, name, media string, data []byte) (contracts.File, error) {
+func (s *Service) storeFile(owner string, run *string, key *string, name, media string, data []byte, parent, execution *string) (contracts.File, error) {
 	var result contracts.File
 	if key != nil && media == "text/csv" {
 		reader := csv.NewReader(bytes.NewReader(data))
@@ -122,9 +127,7 @@ func (s *Service) storeFile(owner string, run *string, key *string, name, media 
 		}
 		data = out.Bytes()
 	}
-	if fileRoot() == "" {
-		return result, errors.New("FILE_STORAGE_UNAVAILABLE")
-	}
+
 	if media == "application/json" {
 		var v any
 		if json.Unmarshal(data, &v) != nil || contracts.Validate("Chart", v) != nil {
@@ -141,87 +144,121 @@ func (s *Service) storeFile(owner string, run *string, key *string, name, media 
 	if run != nil && key != nil {
 		id = uuid.NewSHA1(uuid.MustParse(*run), []byte(*key)).String()
 	}
-	storage := "obj-" + id
+
 	source := "upload"
 	if key != nil {
 		source = "generated"
 	}
-	result = contracts.File{Id: id, OwnerId: owner, RunId: run, Name: name, MediaType: media, Size: int64(len(data)), Sha256: digest, Source: source, Status: "READY", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+	result = contracts.File{Id: id, OwnerId: owner, RunId: run, Name: name, MediaType: media, Size: int64(len(data)), Sha256: digest, Source: source, Status: "PENDING", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+	if s.Blobs == nil {
+		return result, blobstore.ErrUnavailable
+	}
+	provider := s.Blobs.Default
+	store, err := s.Blobs.For(provider)
+	if err != nil {
+		return result, err
+	}
+	storage := "users/" + owner + "/uploads/" + id + "/content"
+	if key != nil {
+		storage = "users/" + owner + "/revisions/" + id + "/content"
+	}
+	// Durable intent precedes object I/O. A process crash after Put cannot leave
+	// an untracked orphan; the cleaner waits and rechecks committed references.
+	if e := s.DB.Exec("INSERT INTO backend.blob_cleanup(storage_provider,storage_key) VALUES(?,?) ON CONFLICT DO NOTHING", provider, storage).Error; e != nil {
+		return result, e
+	}
 	e := s.DB.Transaction(func(tx *gorm.DB) error {
 		if e := tx.Exec("SELECT pg_advisory_xact_lock(210004)").Error; e != nil {
 			return e
 		}
 		var prior fileRow
-		e := tx.Where("id=?", id).Take(&prior).Error
-		if e == nil {
+		if e := tx.Where("id=?", id).Take(&prior).Error; e == nil {
 			v := filePublic(prior)
-			if v.OwnerId != owner || v.Sha256 != digest || v.MediaType != media {
+			if v.OwnerId != owner || v.Sha256 != digest || v.MediaType != media || !samePointer(v.ParentFileId, parent) || !samePointer(v.SourceExecutionId, execution) {
 				return errors.New("ARTIFACT_CONFLICT")
 			}
-			if _, e := readStored(prior); e != nil {
+			if _, e := s.readStored(prior); e != nil {
 				return e
 			}
 			result = v
 			return nil
-		}
-		if e != gorm.ErrRecordNotFound {
+		} else if e != gorm.ErrRecordNotFound {
 			return e
 		}
-		if e := os.MkdirAll(fileRoot(), 0700); e != nil {
+		if key != nil {
+			if e := s.prepareRevision(tx, &result, parent, execution); e != nil {
+				return e
+			}
+		}
+		row := fileRow{ID: id, OwnerID: owner, RunID: run, ArtifactKey: key, Data: encodeJSON(result), StorageKey: storage, StorageProvider: provider, Status: "PENDING", CreatedAt: time.Now().UTC()}
+		if e := tx.Create(&row).Error; e != nil {
 			return e
 		}
-		tmp, e := os.CreateTemp(fileRoot(), "tmp-")
-		if e != nil {
+		if key != nil {
+			var parentRevision *string
+			if parent != nil {
+				var pf fileRow
+				if e := tx.Where("id=?", *parent).Take(&pf).Error; e != nil {
+					return e
+				}
+				parentRevision = filePublic(pf).RevisionId
+			}
+			if e := tx.Exec("INSERT INTO backend.artifact_revisions(id,artifact_id,version,parent_revision_id,file_id,source_thread_id,source_run_id,source_execution_id,status) VALUES(?,?,?,?,?,?,?,?,'PENDING')", *result.RevisionId, *result.ArtifactId, *result.Version, parentRevision, id, result.SourceThreadId, run, execution).Error; e != nil {
+				return e
+			}
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		meta := blobstore.Metadata{Size: result.Size, SHA256: digest, MediaType: media}
+		if e := store.Put(ctx, storage, data, meta); e != nil {
 			return e
 		}
-		tempName := tmp.Name()
-		defer os.Remove(tempName)
-		if _, e = tmp.Write(data); e != nil {
-			tmp.Close()
+		if e := store.Head(ctx, storage, meta); e != nil {
 			return e
 		}
-		if e = tmp.Sync(); e != nil {
-			tmp.Close()
-			return e
-		}
-		if e = tmp.Close(); e != nil {
-			return e
-		}
-		target := filepath.Join(fileRoot(), storage)
-		if e = os.Rename(tempName, target); e != nil {
-			return e
-		}
-		row := fileRow{ID: id, OwnerID: owner, RunID: run, ArtifactKey: key, Data: encodeJSON(result), StorageKey: storage, CreatedAt: time.Now().UTC()}
 		if os.Getenv("ENABLE_FAULTS") == "true" && os.Getenv("FAULT_ARTIFACT_METADATA") == "true" && key != nil {
-			os.Remove(target)
 			return errors.New("ARTIFACT_STORAGE_FAILED")
 		}
-		if e = tx.Create(&row).Error; e != nil {
-			os.Remove(target)
+		result.Status = "READY"
+		if e := tx.Model(&fileRow{}).Where("id=?", id).Updates(map[string]any{"data": encodeJSON(result), "status": "READY"}).Error; e != nil {
 			return e
+		}
+		if key != nil {
+			if e := tx.Exec("UPDATE backend.artifact_revisions SET status='READY' WHERE id=?", *result.RevisionId).Error; e != nil {
+				return e
+			}
+			if e := tx.Exec("UPDATE backend.artifacts SET current_revision_id=? WHERE id=?", *result.RevisionId, *result.ArtifactId).Error; e != nil {
+				return e
+			}
 		}
 		return nil
 	})
+	if e == nil {
+		_ = s.DB.Exec("DELETE FROM backend.blob_cleanup WHERE storage_provider=? AND storage_key=?", provider, storage).Error
+	}
 	return result, e
 }
-func readStored(row fileRow) ([]byte, error) {
-	if row.StorageKey != "obj-"+row.ID || !validID(row.ID) {
-		return nil, errors.New("FILE_STORAGE_INVALID")
+func samePointer(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
 	}
-	path := filepath.Join(fileRoot(), row.StorageKey)
-	stat, e := os.Lstat(path)
-	if e != nil || !stat.Mode().IsRegular() || stat.Size() > maxFileBytes {
-		return nil, errors.New("FILE_MISSING")
+	return *a == *b
+}
+func (s *Service) readStored(row fileRow) ([]byte, error) {
+	if !validID(row.ID) || row.Status != "" && row.Status != "READY" {
+		return nil, errors.New("ARTIFACT_NOT_READY")
 	}
-	data, e := os.ReadFile(path)
+	if s.Blobs == nil {
+		return nil, blobstore.ErrUnavailable
+	}
+	store, e := s.Blobs.For(row.StorageProvider)
 	if e != nil {
-		return nil, errors.New("FILE_MISSING")
+		return nil, e
 	}
-	hash := sha256.Sum256(data)
-	if hex.EncodeToString(hash[:]) != filePublic(row).Sha256 {
-		return nil, errors.New("FILE_INTEGRITY_ERROR")
-	}
-	return data, nil
+	v := filePublic(row)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	return store.Get(ctx, row.StorageKey, blobstore.Metadata{Size: v.Size, SHA256: v.Sha256, MediaType: v.MediaType})
 }
 func (s *Service) ownedFile(c *gin.Context) (fileRow, bool) {
 	var row fileRow
@@ -268,9 +305,13 @@ func (s *Service) Upload(c *gin.Context) {
 		failure(c, 400, "INVALID_ARGUMENT")
 		return
 	}
-	v, e := s.storeFile(identity(c).UserId, nil, nil, name, media, data)
+	v, e := s.storeFile(identity(c).UserId, nil, nil, name, media, data, nil, nil)
 	if e != nil {
-		failure(c, 400, safeFileError(e))
+		status := 400
+		if errors.Is(e, blobstore.ErrUnavailable) || safeFileError(e) == "FILE_STORAGE_UNAVAILABLE" {
+			status = 503
+		}
+		failure(c, status, safeFileError(e))
 		return
 	}
 	if binaryMedia(media) {
@@ -284,7 +325,7 @@ func (s *Service) Upload(c *gin.Context) {
 	c.JSON(201, v)
 }
 func safeFileError(e error) string {
-	for _, v := range []string{"FILE_TOO_LARGE", "UNSUPPORTED_FILE_ENCODING", "TEXT_TOO_LARGE", "INVALID_CSV", "INVALID_CSV_HEADER", "CSV_ROW_LIMIT", "INVALID_CHART", "ARTIFACT_CONFLICT", "ARTIFACT_STORAGE_FAILED", "FILE_MISSING", "FILE_INTEGRITY_ERROR"} {
+	for _, v := range []string{"FILE_TOO_LARGE", "UNSUPPORTED_FILE_ENCODING", "TEXT_TOO_LARGE", "INVALID_CSV", "INVALID_CSV_HEADER", "CSV_ROW_LIMIT", "INVALID_CHART", "ARTIFACT_CONFLICT", "ARTIFACT_STORAGE_FAILED", "FILE_MISSING", "FILE_INTEGRITY_ERROR", "STORAGE_UNAVAILABLE", "ARTIFACT_NOT_READY", "FILE_NOT_AUTHORIZED", "ARTIFACT_REVISION_CONFLICT"} {
 		if e.Error() == v {
 			return v
 		}
@@ -302,7 +343,10 @@ func (s *Service) Files(c *gin.Context) {
 		failure(c, 400, "INVALID_ARGUMENT")
 		return
 	}
-	q := s.DB.Where("owner_id=?", identity(c).UserId)
+	q := s.DB.Where("owner_id=? AND status='READY'", identity(c).UserId)
+	// A logical artifact appears once in the library; historical versions stay
+	// addressable by File ID and through the explicit version endpoint.
+	q = q.Where("(data->>'artifact_id' IS NULL OR EXISTS (SELECT 1 FROM backend.artifacts a WHERE a.id::text=backend.files.data->>'artifact_id' AND a.current_revision_id::text=backend.files.data->>'revision_id'))")
 	if source != "" {
 		q = q.Where("data->>'source'=?", source)
 	}
@@ -338,7 +382,7 @@ func (s *Service) FileContent(c *gin.Context) {
 	s.serveContent(c, row, false)
 }
 func (s *Service) serveContent(c *gin.Context, row fileRow, internal bool) {
-	data, e := readStored(row)
+	data, e := s.readStored(row)
 	if e != nil {
 		failure(c, 503, safeFileError(e))
 		return
@@ -384,19 +428,73 @@ func (s *Service) serveContent(c *gin.Context, row fileRow, internal bool) {
 	}
 	c.JSON(200, contracts.FileContent{File: meta, Text: text, Columns: columns})
 }
+func (s *Service) DownloadLocation(c *gin.Context) {
+	row, ok := s.ownedFile(c)
+	if !ok {
+		return
+	}
+	v := filePublic(row)
+	store, e := s.Blobs.For(row.StorageProvider)
+	if e != nil {
+		failure(c, 503, safeFileError(e))
+		return
+	}
+	if row.StorageProvider == "s3" {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		if e = store.Head(ctx, row.StorageKey, blobstore.Metadata{Size: v.Size, SHA256: v.Sha256, MediaType: v.MediaType}); e != nil {
+			failure(c, 503, safeFileError(e))
+			return
+		}
+		u, expires, e := store.PresignGet(ctx, row.StorageKey, v.Name, v.MediaType)
+		if e != nil {
+			failure(c, 503, safeFileError(e))
+			return
+		}
+		c.Header("Cache-Control", "no-store")
+		c.Header("Referrer-Policy", "no-referrer")
+		c.JSON(200, contracts.DownloadLocation{Url: u, ExpiresAt: expires.Format(time.RFC3339), Mode: "presigned"})
+		return
+	}
+	c.Header("Cache-Control", "no-store")
+	c.JSON(200, contracts.DownloadLocation{Url: "/api/files/" + v.Id + "/download", ExpiresAt: time.Now().UTC().Add(10 * time.Minute).Format(time.RFC3339), Mode: "stream"})
+}
 func (s *Service) Download(c *gin.Context) {
 	row, ok := s.ownedFile(c)
 	if !ok {
 		return
 	}
-	data, e := readStored(row)
+	if row.StorageProvider == "s3" {
+		v := filePublic(row)
+		store, e := s.Blobs.For("s3")
+		if e != nil {
+			failure(c, 503, safeFileError(e))
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+		if e = store.Head(ctx, row.StorageKey, blobstore.Metadata{Size: v.Size, SHA256: v.Sha256, MediaType: v.MediaType}); e != nil {
+			failure(c, 503, safeFileError(e))
+			return
+		}
+		u, _, e := store.PresignGet(ctx, row.StorageKey, v.Name, v.MediaType)
+		if e != nil {
+			failure(c, 503, safeFileError(e))
+			return
+		}
+		c.Header("Cache-Control", "no-store")
+		c.Header("Referrer-Policy", "no-referrer")
+		c.Redirect(302, u)
+		return
+	}
+	data, e := s.readStored(row)
 	if e != nil {
 		failure(c, 503, safeFileError(e))
 		return
 	}
 	c.Header("X-Content-Type-Options", "nosniff")
-	c.Header("Content-Disposition", `attachment; filename="download`+filepath.Ext(filePublic(row).Name)+`"`)
-	c.Data(200, filePublic(row).MediaType, data)
+	c.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filePublic(row).Name}))
+	c.DataFromReader(200, int64(len(data)), filePublic(row).MediaType, bytes.NewReader(data), nil)
 }
 func (s *Service) authorizedInternalFile(c *gin.Context) (fileRow, bool) {
 	run := c.Query("run_id")
@@ -436,7 +534,7 @@ func (s *Service) InternalFile(c *gin.Context) {
 		return
 	}
 	if strings.HasSuffix(c.Request.URL.Path, "/blob") {
-		data, e := readStored(row)
+		data, e := s.readStored(row)
 		if e != nil {
 			failure(c, 503, safeFileError(e))
 			return
@@ -496,10 +594,11 @@ func (s *Service) InternalArtifact(c *gin.Context) {
 			return
 		}
 	}
-	file, e := s.storeFile(r.OwnerID, &r.RunID, &req.ArtifactKey, req.Name, req.MediaType, []byte(req.Content))
-	if e == nil {
-		file, e = s.bindParent(file, req.ParentFileId, req.RunId)
+	if e := verifyCandidate([]byte(req.Content), req.Sha256, req.Size); e != nil {
+		failure(c, 400, safeFileError(e))
+		return
 	}
+	file, e := s.storeFile(r.OwnerID, &r.RunID, &req.ArtifactKey, req.Name, req.MediaType, []byte(req.Content), req.ParentFileId, req.ExecutionId)
 	if e != nil {
 		failure(c, 503, safeFileError(e))
 		return

@@ -42,28 +42,14 @@ def summarize(text,file_id,args):
     for p in points:writer.writerow([cell(p['label']),p['value']])
     return chart,output.getvalue()
 
-async def publish_artifact(engine,run,key,name,media,content):
-    response=await engine.backend.post('/internal/artifacts',json={'run_id':run,'artifact_key':key,'name':name,'media_type':media,'content':content})
-    if response.status_code!=200:raise RunError('ARTIFACT_STORAGE_FAILED')
-    file=response.json();validate('File',file)
-    if file['status']!='READY':raise RunError('ARTIFACT_NOT_READY')
-    async with engine.pool.connection() as conn:
-        async with conn.transaction():
-            row=await (await conn.execute('INSERT INTO runtime.artifact_events(run_id,artifact_key,file_id) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING file_id',(run,key,file['id']))).fetchone()
-            if row:await engine.event_on(conn,run,'artifact.ready',file)
-    return file
+async def publish_artifact(engine,run,key,name,media,content,execution=None,parent=None):
+    from .artifact_collector import ArtifactCollector,CandidateArtifact
+    raw=content.encode('utf-8')
+    return await ArtifactCollector(engine,run,execution).publish(key,CandidateArtifact(name,media,raw,hashlib.sha256(raw).hexdigest()),parent,binary=False)
 
-async def publish_binary(engine,run,key,name,media,content,parent=None):
-    meta={'run_id':run,'artifact_key':key,'name':name,'media_type':media}
-    if parent:meta['parent_file_id']=parent
-    response=await engine.backend.post('/internal/artifacts/blob',headers={'X-Artifact-Metadata':json.dumps(meta,ensure_ascii=True)},content=content)
-    if response.status_code!=200:raise RunError('ARTIFACT_STORAGE_FAILED')
-    file=response.json();validate('File',file)
-    async with engine.pool.connection() as c:
-        async with c.transaction():
-            row=await (await c.execute('INSERT INTO runtime.artifact_events(run_id,artifact_key,file_id) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING file_id',(run,key,file['id']))).fetchone()
-            if row:await engine.event_on(c,run,'artifact.ready',file)
-    return file
+async def publish_binary(engine,run,key,name,media,content,parent=None,execution=None):
+    from .artifact_collector import ArtifactCollector,CandidateArtifact
+    return await ArtifactCollector(engine,run,execution).publish(key,CandidateArtifact(name,media,content,hashlib.sha256(content).hexdigest()),parent)
 
 class MaterialTools:
     def __init__(self,engine,start):self.engine=engine;self.start=start
@@ -90,8 +76,8 @@ class MaterialTools:
             content['text']=''.join(groups[selected])
         elif content['file']['media_type']!='text/csv':raise RunError('CSV_REQUIRED')
         chart,csv_text=summarize(content['text'],file_id,args)
-        chart_file=await publish_artifact(self.engine,self.start['run_id'],eid+':chart','分析图表.json','application/json',json.dumps(chart,ensure_ascii=False))
-        csv_file=await publish_artifact(self.engine,self.start['run_id'],eid+':csv','汇总结果.csv','text/csv',csv_text)
+        chart_file=await publish_artifact(self.engine,self.start['run_id'],eid+':chart','分析图表.json','application/json',json.dumps(chart,ensure_ascii=False),execution=eid)
+        csv_file=await publish_artifact(self.engine,self.start['run_id'],eid+':csv','汇总结果.csv','text/csv',csv_text,execution=eid)
         return json.dumps({'calculation':'fixed_decimal_aggregation','source_file':content['file']['name'],'chart':chart,'artifacts':[chart_file['id'],csv_file['id']]},ensure_ascii=False)
 
     async def document(self,file_id):
@@ -148,17 +134,9 @@ class MaterialTools:
         text+='\n\n## 来源\n'+('\n'.join('- [source:'+s['source_id']+'] '+s['title']+' · '+s['locator']+(' · '+s['url'] if s.get('url') else '') for s in sources) if sources else '本报告未提供外部事实来源；请核对涉及事实的内容。')
         # Published text remains within the existing file boundary.
         if len(text)>50000:raise RunError('TEXT_TOO_LARGE')
-        meta={'run_id':self.start['run_id'],'artifact_key':'report-'+eid+'.md','name':args['title'][:90]+'.md','media_type':'text/markdown','content':text}
-        if parent:meta['parent_file_id']=parent
-        response=await self.engine.backend.post('/internal/artifacts',json=meta)
-        if response.status_code!=200:raise RunError('ARTIFACT_STORAGE_FAILED')
-        file=response.json();validate('File',file)
-        async with self.engine.pool.connection() as c:
-            async with c.transaction():
-                row=await (await c.execute('INSERT INTO runtime.artifact_events(run_id,artifact_key,file_id) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING file_id',(self.start['run_id'],meta['artifact_key'],file['id']))).fetchone()
-                if row:await self.engine.event_on(c,self.start['run_id'],'artifact.ready',file)
+        file=await publish_artifact(self.engine,self.start['run_id'],'report-'+eid+'.md',args['title'][:90]+'.md','text/markdown',text,execution=eid,parent=parent)
         files=[file]
-        if args.get('docx'):files.append(await publish_binary(self.engine,self.start['run_id'],'report-'+eid+'.docx',args['title'][:90]+'.docx',DOCX,render_docx(args['title'],text),parent))
+        if args.get('docx'):files.append(await publish_binary(self.engine,self.start['run_id'],'report-'+eid+'.docx',args['title'][:90]+'.docx',DOCX,render_docx(args['title'],text),parent,execution=eid))
         return json.dumps({'completed':True,'files':files,'source_ids':ids},ensure_ascii=False)
 
 async def export_report(engine,run,format='markdown'):

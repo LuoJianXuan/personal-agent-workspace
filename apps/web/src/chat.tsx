@@ -15,12 +15,16 @@ import {
   Collapse,
   Table,
 } from "antd";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import type { ToolChatIntent } from "./tool-center";
 import { createPortal } from "react-dom";
 import { ConversationSidebar, Icon } from "./workspace-ui";
 import Markdown from "react-markdown";
 import { api, authHeaders, ApiError } from "./api";
 import { validate } from "./contracts/validate";
+import { PersonalConnections, usePersonalConnections } from "./connection-manager";
+import { ToolResult } from "./tool-result";
+import { AssistantReply, ReplyMarkdown } from "./assistant-reply";
 import type {
   Thread,
   Message,
@@ -28,11 +32,33 @@ import type {
   Event as RunEvent,
   ModelCatalog,
   SkillConfig,
+  Clarification,
 } from "./contracts/models";
 const terminal = (s: string) =>
   ["SUCCEEDED", "FAILED", "CANCELLED", "INTERRUPTED"].includes(s);
 function errorText(e: unknown) {
   return e instanceof Error ? e.message : "请求失败";
+}
+const failureGuidance: Record<string, { title: string; detail: string }> = {
+  REAL_CALL_BUDGET_EXHAUSTED: { title: "模型调用额度已用完", detail: "当前部署的模型调用额度已用完。请联系管理员调整额度后重试。若工具已返回结果，可在本轮工具卡查看。" },
+  MCP_UNAVAILABLE: { title: "MCP 服务暂不可用", detail: "连接可能下线、超时或凭据失效。请在 MCP 管理中检查个人授权；平台服务请联系管理员。" },
+  MCP_RATE_LIMIT: { title: "MCP 调用过于频繁", detail: "连接已达到本分钟调用上限。请稍后重试，本次不会自动重复外部操作。" },
+  CONNECTION_AUTH_REQUIRED: { title: "个人 MCP 需要重新授权", detail: "服务已拒绝当前 Token。请在 MCP 管理中更换 Token 后重新提交。" },
+  CONNECTION_REVOKED: { title: "个人连接已经断开", detail: "重新连接账户后，再提交原问题。" },
+  TOOL_TIMEOUT: { title: "工具执行超时", detail: "远端工具没有在限制时间内返回。已停止等待；如果工具可能产生写入，请先核对外部系统再重试。" },
+  TOOL_DENIED: { title: "工具当前不可用", detail: "工具未启用、已变更或不在本轮能力快照中。请检查当前 MCP 授权状态。" },
+  NETWORK_DISABLED: { title: "本轮未允许联网", detail: "如需搜索或读取公开网页，请在输入区开启联网后重新发送。" },
+  SEARCH_CREDENTIAL_MISSING: { title: "搜索服务尚未配置", detail: "公开网页直读仍可使用；搜索需要管理员配置搜索凭据与额度。" },
+  COMPUTE_NOT_CONFIGURED: { title: "隔离计算尚未启用", detail: "当前任务需要 Python 沙箱。请启用计算环境后重试，系统不会在 Runtime 或宿主机直接运行生成代码。" },
+  CAPABILITY_CHANGED: { title: "能力配置已经变化", detail: "本轮冻结的模型、技能或工具已被修改。请刷新能力状态后重新提交。" },
+};
+const unknownToolFailure = {
+  title: "工具执行未完成",
+  detail: "远端工具返回失败或中断。已有对话和产物仍会保留；请核对能力状态后再决定是否重试。",
+};
+function FailureCard({ code, retry, connections }: { code: string; retry: () => void; connections: () => void }) {
+  const item=failureGuidance[code]||{title:"任务未完成",detail:`错误代码：${code}。已有结果仍会保留，可核对能力状态后重试。`};
+  return <Alert className="actionable-failure" type="error" showIcon message={item.title} description={<><p>{item.detail}</p><Space wrap><Button size="small" onClick={retry}>将原问题放回输入框</Button>{/^(CONNECTION_|MCP_|TOOL_|CAPABILITY_)/.test(code) && <Button size="small" onClick={connections}>管理 MCP</Button>}</Space></>} />;
 }
 type Draft = {
   id: string;
@@ -42,6 +68,13 @@ type Draft = {
   index: number;
 };
 export function Chat() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const appliedIntent = useRef<string | undefined>(undefined);
+  const connectors = usePersonalConnections();
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [connectorIds, setConnectorIds] = useState<string[]>();
+  const [connectionAction, setConnectionAction] = useState(false);
   const [params, setParams] = useSearchParams();
   const tid = params.get("thread") || "";
   const [network,setNetwork]=useState(false);
@@ -50,6 +83,8 @@ export function Chat() {
   const [welcomeTarget,setWelcomeTarget]=useState<HTMLDivElement|null>(null);
   useEffect(()=>{api<{fetch_available:boolean;search_available:boolean;compute_available:boolean}>("/capabilities/network").then(setNetworkStatus).catch(()=>setNetworkStatus(undefined));},[]);
   const [fileIds, setFileIds] = useState<string[]>(params.get("file") ? [params.get("file")!] : []);
+  const selectedRevisionFile = params.get("file");
+  useEffect(() => { if (selectedRevisionFile) setFileIds([selectedRevisionFile]); }, [selectedRevisionFile]);
   const [threads, setThreads] = useState<Thread[]>([]),
     [messages, setMessages] = useState<Message[]>([]),
     [models, setModels] = useState<ModelCatalog[]>([]),
@@ -74,6 +109,15 @@ export function Chat() {
   }, [events, messages]);
   useEffect(() => { followBottom.current = true; }, [tid]);
   const pending = useRef<{ signature: string; key: string } | null>(null);
+  useEffect(() => {
+    const intent = (location.state as { toolIntent?: ToolChatIntent } | null)?.toolIntent;
+    if (!intent || appliedIntent.current === intent.id) return;
+    appliedIntent.current = intent.id;
+    setInput(intent.draft);
+    setSelected(intent.skillId ? [intent.skillId] : undefined);
+    setConnectorIds(intent.connectorId ? [intent.connectorId] : undefined);
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
+  }, [location.state, location.pathname, location.search, navigate]);
   const refreshThreads = () =>
     api<{ items: Thread[] }>("/threads").then((r) => setThreads(r.items));
   useEffect(() => {
@@ -252,12 +296,14 @@ export function Chat() {
     }
     setBusy(true);
     setError("");
+    setConnectionAction(false);
     const body = {
       input: input.trim(),
       file_ids: fileIds,
       network_enabled: network,
       ...(model ? { model_id: model } : {}),
       ...(selected ? { skill_ids: selected } : {}),
+      ...(connectorIds ? { connector_ids: connectorIds } : {}),
     };
     try {
       let currentThread = tid;
@@ -289,6 +335,7 @@ export function Chat() {
       setRun(result);
     } catch (e) {
       setError(errorText(e));
+      setConnectionAction(e instanceof ApiError && /^(CONNECTION_|SKILL_DEPENDENCY_)/.test(e.code));
     } finally {
       setBusy(false);
     }
@@ -322,8 +369,19 @@ export function Chat() {
   }
   const active = !!runId && (!run || !terminal(run.status));
   const persistedRuns = new Set(messages.filter(m => m.role === "assistant").map(m => m.run_id));
-  const historyReplies = (id: string) => messages.filter(a => a.role === "assistant" && a.run_id === id).map(a => <article className="chat-message assistant" key={a.id}><div className="message-author"><span className="assistant-symbol"><Icon name="skill" size={14} /></span>序光</div><div className="message-body"><Markdown skipHtml components={{ img: () => null }}>{a.text}</Markdown></div></article>);
+  const historyReplies = (id: string) => messages.filter(a => a.role === "assistant" && a.run_id === id).map(a => <article className="chat-message assistant" key={a.id}><div className="message-author"><span className="assistant-symbol"><Icon name="skill" size={14} /></span>序光</div><div className="message-body"><AssistantReply text={a.text} runId={id} events={id === runId ? events : undefined} /></div></article>);
   const toolEvents = events.filter(e => e.type.startsWith("tool."));
+  const clarification=(events.filter(e=>e.type==="message.completed"&&Boolean((e.payload as {clarification?:Clarification}).clarification)).at(-1)?.payload as {clarification?:Clarification}|undefined)?.clarification;
+  const toolRuns = Array.from(toolEvents.reduce((items, event) => {
+    const payload = event.payload as unknown as { execution_id?: string; text?: string; status?: string };
+    const key = payload.execution_id || event.event_id;
+    const previous = items.get(key) || { key, name: "工具", result: "", status: "REQUESTED" };
+    if (event.type === "tool.requested") previous.name = payload.text || "工具";
+    if (event.type === "tool.completed" || event.type === "tool.failed") previous.result = payload.text || "";
+    previous.status = payload.status || previous.status;
+    items.set(key, previous);
+    return items;
+  }, new Map<string, { key: string; name: string; result: string; status: string }>()).values());
   const statusNames: Record<string, string> = { PENDING: "等待开始", QUEUED: "等待处理", RUNNING: "正在处理", WAITING_APPROVAL: "等待确认", SUCCEEDED: "已完成", FAILED: "运行失败", CANCELLED: "已取消", INTERRUPTED: "已中断" };
   const newButton = <Button block icon={<Icon name="plus" />} onClick={create}>新建对话</Button>;
   const visibleThreads=threads.filter(t=>t.title.toLowerCase().includes(threadQuery.toLowerCase()));
@@ -356,16 +414,29 @@ export function Chat() {
       {sidebar.action && createPortal(newButton, sidebar.action)}
       {sidebar.recent && createPortal(threadList, sidebar.recent)}
       <Drawer title="近期对话" placement="left" open={threadDrawer} onClose={() => setThreadDrawer(false)}>{newButton}{threadList}</Drawer>
+      <Drawer title="本轮 MCP" open={connectionsOpen} onClose={() => setConnectionsOpen(false)}>
+        <Space direction="vertical" style={{ width: "100%" }}>
+          <Select aria-label="选择本轮个人连接" mode="multiple" style={{ width: "100%" }}
+            value={connectorIds ?? connectors.data?.items.filter((item) => item.status === "ready").map((item) => item.connector_id) ?? []}
+            options={connectors.data?.items.filter((item) => item.status === "ready").map((item) => ({ value: item.connector_id, label: item.name }))}
+            onChange={setConnectorIds} notFoundContent="暂无已安装的个人 MCP" />
+          <Button type="text" onClick={() => setConnectorIds(undefined)}>使用全部已授权 MCP</Button>
+          <PersonalConnections />
+        </Space>
+      </Drawer>
       <section className={`chat-main ${messages.length===0?"is-welcome":""}`} aria-label="对话工作台">
         <header className="chat-heading">
           <div className="chat-title"><Button className="mobile-threads" type="text" aria-label="打开近期对话" icon={<Icon name="chat" />} onClick={() => setThreadDrawer(true)} /><Icon name="chat" size={17} /><strong>{threads.find(t => t.id === tid)?.title || "新对话"}</strong>
             {tid && <Button type="text" size="small" aria-label="重命名对话" title="重命名对话" icon={<Icon name="edit" size={14} />} onClick={rename} />}
           </div>
-          <Button type={artifactsOpen ? "primary" : "default"} aria-label={artifactsOpen ? "收起产物面板" : "打开产物面板"} aria-expanded={artifactsOpen} icon={<Icon name="panel" />} onClick={() => setArtifactsOpen(!artifactsOpen)} />
+          <Space>
+            <Button size="small" icon={<Icon name="plug" size={14} />} onClick={() => setConnectionsOpen(true)}>MCP</Button>
+            <Button type={artifactsOpen ? "primary" : "default"} aria-label={artifactsOpen ? "收起产物面板" : "打开产物面板"} aria-expanded={artifactsOpen} icon={<Icon name="panel" />} onClick={() => setArtifactsOpen(!artifactsOpen)} />
+          </Space>
         </header>
         <div className="conversation" ref={scrollArea} onScroll={() => { const el = scrollArea.current; if (el) followBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }}>
           <div className="conversation-inner">
-            {error && <Alert type="error" showIcon message={error} closable onClose={() => setError("")} />}
+            {error && <Alert type="error" showIcon message={error} action={connectionAction && <Button onClick={() => setConnectionsOpen(true)}>管理 MCP</Button>} closable onClose={() => setError("")} />}
             {messages.length === 0 && <section className="chat-welcome">
               <h1>今天帮你完成什么？</h1>
               <p>带上资料，整理内容、比较方案，或交付一份报告。</p><div className="welcome-composer" ref={setWelcomeTarget}/>
@@ -384,19 +455,22 @@ export function Chat() {
                 {m.run_id === runId ? <>
                   {drafts.filter(d => (!d.done || d.text.trim().length > 0) && (!persistedRuns.has(m.run_id) || (d.done && !d.final))).map(d => <article className="chat-message assistant" key={d.id}>
                     <div className="message-author"><span className="assistant-symbol"><Icon name="skill" size={14} /></span>序光{!d.done && <span className="message-progress">{run && terminal(run.status) ? "未完成" : "正在生成…"}</span>}</div>
-                    <div className="message-body"><Markdown skipHtml components={{ img: () => null }}>{d.text}</Markdown></div>
+                    <div className="message-body">{d.done && d.final ? <AssistantReply text={d.text} runId={m.run_id} events={events} /> : <ReplyMarkdown text={d.text} />}</div>
                   </article>)}
                   {historyReplies(m.run_id)}
-                  {toolEvents.length > 0 && <Collapse ghost className="tool-process" items={[{ key: "tools", label: <span>工具执行过程 · {toolEvents.length} 条记录{toolEvents.some(e => e.type === "tool.failed") && <Tag color="error">存在失败</Tag>}</span>, children: toolEvents.map(e => <div key={e.event_id} className={`tool-event ${e.type === "tool.failed" ? "failed" : ""}`}>
-                    <strong>{({ "tool.requested": "工具请求", "tool.started": "工具执行中", "tool.completed": "工具执行结果", "tool.failed": "工具执行失败" } as Record<string, string>)[e.type] || e.type}</strong><pre>{(e.payload as { text?: string }).text}</pre>
+                  {toolRuns.length > 0 && <Collapse ghost className="tool-process" items={[{ key: "tools", label: <span>工具执行 · {toolRuns.length} 项{toolRuns.some(t => t.status === "FAILED") && <Tag color="error">存在失败</Tag>}</span>, children: toolRuns.map(tool => <div key={tool.key} className={`tool-event ${tool.status === "FAILED" ? "failed" : ""}`}>
+                    <Space wrap><strong>{tool.name}</strong><Tag color={tool.status === "SUCCEEDED" ? "success" : tool.status === "FAILED" ? "error" : "processing"}>{({ REQUESTED: "已请求", RUNNING: "执行中", SUCCEEDED: "已完成", FAILED: "失败", CANCELLED: "已取消", UNKNOWN: "结果未知" } as Record<string,string>)[tool.status] || tool.status}</Tag></Space>
+                    {tool.result && (tool.status === "SUCCEEDED" ? <ToolResult text={tool.result} /> : <pre>{tool.result}</pre>)}
+                    {tool.status === "FAILED" && <p className="tool-guidance">{(failureGuidance[tool.result] || unknownToolFailure).detail}</p>}
                   </div>) }]} />}
                 </> : historyReplies(m.run_id)}
               </Fragment>)}
             </div>
             {runId && <div className="run-meta"><span className={`status-dot ${run?.status === "FAILED" ? "failed" : ""}`} /><span>{statusNames[run?.status || "PENDING"] || run?.status}</span><span>{connection}</span>{run?.mode === "mock" && <Tag>Mock 模式</Tag>}<details><summary>运行详情</summary><Typography.Text copyable>{runId}</Typography.Text><p>{run?.mode === "mock" ? "Mock 验收模式" : "真实模型"}</p>{run?.trace_url&&<a href={run.trace_url} target="_blank" rel="noopener noreferrer">查看 Agent 调用</a>}</details></div>}
             {run?.runtime_unavailable && <Alert type={run.status==='PENDING'||run.status==='QUEUED'?"info":"warning"} message={run.status==='PENDING'||run.status==='QUEUED'?"已保存提交，正在等待运行接入":"服务暂不可达，已保留提交，正在等待同步"} />}
-            {run?.error_code && <Alert type="error" message={run.error_code} />}
+            {run?.error_code && <FailureCard code={run.error_code} retry={()=>setInput(messages.find(m=>m.role==="user"&&m.run_id===runId)?.text||"")} connections={() => { void connectors.refetch(); setConnectionsOpen(true); }} />}
             {runId && <Phase1Activity events={events}/>}
+            {clarification&&<Card size="small" className="clarification-card" title="需要你的选择" extra={<Tag color="blue">继续前确认</Tag>}><Typography.Paragraph>{clarification.question}</Typography.Paragraph><Space wrap>{clarification.options.map(option=><Button key={option.id} onClick={()=>setInput(option.value)}>{option.label}</Button>)}{clarification.allow_custom&&<Button type="text" onClick={()=>setInput(clarification.question+" ")}>自行说明</Button>}</Space><Typography.Paragraph type="secondary">选择只会填入输入框，发送后才会继续任务。</Typography.Paragraph></Card>}
             {runId && <RunPanel id={runId} onStatus={setRun} artifactsTarget={artifactsTarget} />}
           </div>
         </div>
